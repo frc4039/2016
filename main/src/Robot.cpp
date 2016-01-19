@@ -20,6 +20,7 @@ private:
 	Image *image;
 	USBCamera *Camera;
 	RGBValue *colours;
+	ImageInfo imageinfo;
 
 	IMAQdxSession session;
 	Image *frame;
@@ -118,11 +119,11 @@ private:
 		Camera->SetWhiteBalanceManual(1);
 		Camera->SetBrightness(1);
 		Camera->SetFPS(1);
-		CaptureVideo();
+		TakePicture();
 		lw->Run();
 	}
 
-	bool teleDrive()
+	void teleDrive()
 	{
 		float x = m_Joystick->GetX();
 		float y = m_Joystick->GetY();
@@ -132,10 +133,15 @@ private:
 		//float rightSpeed = -x + y;
 	}
 
-	void CaptureVideo()
+	void TakePicture()
 	{
+		int *pixel;
+
 		// acquire images
 		IMAQdxStartAcquisition(session);
+
+
+
 
 	    // grab an image, draw the circle, and provide it for the camera server which will
 	    // in turn send it to the dashboard.
@@ -150,7 +156,22 @@ private:
 			else
 			{
 				imaqDrawShapeOnImage(frame, frame, { 10, 10, 200, 200 }, DrawMode::IMAQ_DRAW_VALUE, ShapeMode::IMAQ_SHAPE_OVAL, 0.0f);
+
+
+				imaqGetImageInfo(frame, &imageinfo);
+				char *pixel = (char*)(imageinfo.imageStart);
+
+				printf ("Picture resolution is %d, %d\n", imageinfo.xRes, imageinfo.yRes);
+				printf ("here is the pixel: %d\n", imageinfo.pixelsPerLine);
+				for (int i = 0; i < 3*640*(480/2); i++){
+					pixel[i] = 0;
+
+
+				}
+
+
 				CameraServer::GetInstance()->SetImage(frame);
+
 			}
 
 			Wait(0.005);				// wait for a motor update time
