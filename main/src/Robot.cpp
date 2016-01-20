@@ -56,6 +56,10 @@ private:
 		raw_pixel = (char*)(raw_info.imageStart);
 		proc_pixel = (char*)(proc_info.imageStart);
 	}
+
+#define RES_X 640
+#define RES_Y 480
+
 	void VisionInit(void){
 
 		Camera = new USBCamera("cam0", true);
@@ -63,7 +67,13 @@ private:
 		frame = imaqCreateImage(IMAQ_IMAGE_RGB, 0);
 		processed = imaqCreateImage(ImageType::IMAQ_IMAGE_U8,0);
 
+		imaqResample(frame, frame, RES_X, RES_Y, InterpolationMethod::IMAQ_ZERO_ORDER, {0,0,RES_X,RES_Y});
+		imaqResample(processed, processed, RES_X, RES_Y, InterpolationMethod::IMAQ_ZERO_ORDER, {0,0,RES_X,RES_Y});
+
 		getImageInfo();
+		printf("Picture resolution is %d, %d\n", raw_info.xRes, raw_info.yRes);
+		printf("pixels per line: %d\n", raw_info.pixelsPerLine);
+
 
 		//the camera name (ex "cam0") can be found through the roborio web interface
 		imaqError = IMAQdxOpenCamera("cam0", IMAQdxCameraControlModeController, &session);
@@ -156,8 +166,6 @@ private:
 			IMAQdxGrab(session, frame, true, NULL);
 			getImageInfo();
 
-			*processed = *frame;
-
 			if(imaqError != IMAQdxErrorSuccess)
 			{
 				DriverStation::ReportError("IMAQdxGrab error: " + std::to_string((long)imaqError) + "\n");
@@ -171,8 +179,6 @@ private:
 				BinaryImage b = target.t;
 				*/
 
-				printf ("Picture resolution is %d, %d\n", raw_info.xRes, raw_info.yRes);
-				printf ("pixels per line: %d\n", raw_info.pixelsPerLine);
 
 				HSLFilter();
 
@@ -188,8 +194,7 @@ private:
 		IMAQdxStopAcquisition(session);
 		}
 
-#define RES_X 640
-#define RES_Y 480
+
 
 	void HSLFilter(){
 		for (int i = 0; i < (RES_X*RES_Y)/2; i=i+4){
