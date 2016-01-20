@@ -1,4 +1,4 @@
-obj = SmartGyro.cpp
+obj = test.cpp
 CC = g++
 CFLAGS = 
 

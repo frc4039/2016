@@ -2,6 +2,9 @@
 #include <USBCamera.h>
 #include <math.h>
 
+#define RES_X 640
+#define RES_Y 480
+
 class Robot: public IterativeRobot
 {
 private:
@@ -29,6 +32,11 @@ private:
 	IMAQdxError imaqError;
 	char *raw_pixel;
 	char *proc_pixel;
+	char proc_array[RES_Y][RES_X];
+	char raw_array[RES_Y][RES_X*4];
+	char *R, *G, *B;
+	uInt32 numOfAttributes;
+	IMAQdxAttributeInformation *cameraAttributes;
 
 
 	void RobotInit() override
@@ -46,34 +54,51 @@ private:
 		m_Joystick = new Joystick(0);
 
 		VisionInit();
-
+		//CameraSettings();
 
 	}
 
-	void getImageInfo(void){
-		imaqGetImageInfo(frame, &raw_info);
-		imaqGetImageInfo(processed, &proc_info);
-		raw_pixel = (char*)(raw_info.imageStart);
-		proc_pixel = (char*)(proc_info.imageStart);
-	}
 
-#define RES_X 640
-#define RES_Y 480
+	void CameraSettings(void){
+		//printf("camera brightness: %d\n",Camera->GetBrightness());
+		//Camera->OpenCamera();
+		//printf("camera brightness: %d\n",Camera->GetBrightness());
+		//Camera->SetBrightness();
+		//Camera->SetExposureManual(0);
+		//Camera->SetWhiteBalanceManual(whiteBalance::kFixedIndoor);
+		//printf("camera brightness: %d\n",Camera->GetBrightness());
+		//Camera->CloseCamera();
+
+		//IMAQdxEnumerateAttributes2(session, NULL, &numOfAttributes, , IMAQdxAttributeVisibilityAdvanced);
+		//printf("num of attributes: %d\n", (int)numOfAttributes);
+		//cameraAttributes = new IMAQdxAttributeInformation[numOfAttributes];
+		//IMAQdxEnumerateAttributes2(session, cameraAttributes, &numOfAttributes, "CameraAttributes", IMAQdxAttributeVisibilityAdvanced);
+	}
 
 	void VisionInit(void){
 
-		Camera = new USBCamera("cam0", true);
+		Camera = new USBCamera("cam0", false);
 
+		//initialize image data structure (no size)
 		frame = imaqCreateImage(IMAQ_IMAGE_RGB, 0);
 		processed = imaqCreateImage(ImageType::IMAQ_IMAGE_U8,0);
 
-		imaqResample(frame, frame, RES_X, RES_Y, InterpolationMethod::IMAQ_ZERO_ORDER, {0,0,RES_X,RES_Y});
-		imaqResample(processed, processed, RES_X, RES_Y, InterpolationMethod::IMAQ_ZERO_ORDER, {0,0,RES_X,RES_Y});
+		//initialize image with a size
+		imaqArrayToImage(frame, &raw_array, RES_X, RES_Y);
+		imaqArrayToImage(processed, &proc_array, RES_X, RES_Y);
 
-		getImageInfo();
-		printf("Picture resolution is %d, %d\n", raw_info.xRes, raw_info.yRes);
-		printf("pixels per line: %d\n", raw_info.pixelsPerLine);
+		//get image pointers and info
+		imaqGetImageInfo(frame, &raw_info);
+		imaqGetImageInfo(processed, &proc_info);
 
+		//set up pixel pointers
+		raw_pixel = (char*)(raw_info.imageStart);
+		proc_pixel = (char*)(proc_info.imageStart);
+		R = raw_pixel;
+		G = raw_pixel + 1;
+		B = raw_pixel + 2;
+
+		CameraSettings();
 
 		//the camera name (ex "cam0") can be found through the roborio web interface
 		imaqError = IMAQdxOpenCamera("cam0", IMAQdxCameraControlModeController, &session);
@@ -164,7 +189,6 @@ private:
 		while(IsOperatorControl() && IsEnabled())
 		{
 			IMAQdxGrab(session, frame, true, NULL);
-			getImageInfo();
 
 			if(imaqError != IMAQdxErrorSuccess)
 			{
@@ -172,18 +196,11 @@ private:
 			}
 			else
 			{
-				//imaqDrawShapeOnImage(frame, frame, { 10, 10, 200, 200 }, DrawMode::IMAQ_DRAW_VALUE, ShapeMode::IMAQ_SHAPE_OVAL, 0.0f);
-				/*
-				Threshold t;
-				HSLImage target;
-				BinaryImage b = target.t;
-				*/
-
 
 				HSLFilter();
 
 
-				CameraServer::GetInstance()->SetImage(frame);
+				CameraServer::GetInstance()->SetImage(processed);
 
 			}
 
@@ -195,15 +212,15 @@ private:
 		}
 
 
-
+#define THRESHOLD 230
 	void HSLFilter(){
-		for (int i = 0; i < (RES_X*RES_Y)/2; i=i+4){
-			char R = raw_pixel[i];
-			char B = raw_pixel[i+1];
-			char G = raw_pixel[i+2];
-			int hue = atan2( sqrt(3)*(G-B), (2*R)-G-B );
+		for (int i = 0; i < (RES_X*RES_Y); i++){
+			//int hue = atan2( sqrt(3)*(G[i*4]-B[i*4]), (2*R[i*4])-G[i*4]-B[i*4] );
 
-			//proc_pixel[(i/4)] = G;
+			if (R[i*4] > THRESHOLD)
+				proc_pixel[i] = 255;
+			else
+				proc_pixel[i] = 0;
 
 		}
 
