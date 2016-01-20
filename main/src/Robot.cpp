@@ -1,5 +1,6 @@
 #include "WPILib.h"
 #include <USBCamera.h>
+#include <math.h>
 
 class Robot: public IterativeRobot
 {
@@ -17,14 +18,17 @@ private:
 
 	Joystick *m_Joystick;
 
-	Image *image;
+	//=======================Vision Variables======================
 	USBCamera *Camera;
-	RGBValue *colours;
-	ImageInfo imageinfo;
-
 	IMAQdxSession session;
+
 	Image *frame;
+	Image *processed;
+	ImageInfo raw_info;
+	ImageInfo proc_info;
 	IMAQdxError imaqError;
+	char *raw_pixel;
+	char *proc_pixel;
 
 
 	void RobotInit() override
@@ -41,12 +45,26 @@ private:
 
 		m_Joystick = new Joystick(0);
 
+		VisionInit();
+
+
+	}
+
+	void getImageInfo(void){
+		imaqGetImageInfo(frame, &raw_info);
+		imaqGetImageInfo(processed, &proc_info);
+		raw_pixel = (char*)(raw_info.imageStart);
+		proc_pixel = (char*)(proc_info.imageStart);
+	}
+	void VisionInit(void){
+
 		Camera = new USBCamera("cam0", true);
 
-		//intermediate vision
-
-		// create an image
 		frame = imaqCreateImage(IMAQ_IMAGE_RGB, 0);
+		processed = imaqCreateImage(ImageType::IMAQ_IMAGE_U8,0);
+
+		getImageInfo();
+
 		//the camera name (ex "cam0") can be found through the roborio web interface
 		imaqError = IMAQdxOpenCamera("cam0", IMAQdxCameraControlModeController, &session);
 
@@ -62,15 +80,8 @@ private:
 			DriverStation::ReportError("IMAQdxConfigureGrab error: " + std::to_string((long)imaqError) + "\n");
 		}
 
-		/*Camera->SetFPS(1);
-		Camera->SetExposureManual(1);
-		Camera->SetWhiteBalanceManual(1);
-		Camera->SetBrightness(1);
-		*/
 
 	}
-
-
 	/**
 	 * This autonomous (along with the chooser code above) shows how to select between different autonomous modes
 	 * using the dashboard. The sendable chooser code works with the Java SmartDashboard. If you prefer the LabVIEW
@@ -115,10 +126,10 @@ private:
 
 	void TeleopPeriodic()
 	{
-		Camera->SetExposureManual(1);
-		Camera->SetWhiteBalanceManual(1);
-		Camera->SetBrightness(1);
-		Camera->SetFPS(1);
+		Camera->SetExposureManual(100);
+		Camera->SetWhiteBalanceManual(100);
+		Camera->SetBrightness(100);
+		//Camera->SetFPS(1);
 		TakePicture();
 		lw->Run();
 	}
@@ -135,19 +146,17 @@ private:
 
 	void TakePicture()
 	{
-		int *pixel;
-
 		// acquire images
 		IMAQdxStartAcquisition(session);
-
-
-
 
 	    // grab an image, draw the circle, and provide it for the camera server which will
 	    // in turn send it to the dashboard.
 		while(IsOperatorControl() && IsEnabled())
 		{
 			IMAQdxGrab(session, frame, true, NULL);
+			getImageInfo();
+
+			*processed = *frame;
 
 			if(imaqError != IMAQdxErrorSuccess)
 			{
@@ -155,19 +164,17 @@ private:
 			}
 			else
 			{
-				imaqDrawShapeOnImage(frame, frame, { 10, 10, 200, 200 }, DrawMode::IMAQ_DRAW_VALUE, ShapeMode::IMAQ_SHAPE_OVAL, 0.0f);
+				//imaqDrawShapeOnImage(frame, frame, { 10, 10, 200, 200 }, DrawMode::IMAQ_DRAW_VALUE, ShapeMode::IMAQ_SHAPE_OVAL, 0.0f);
+				/*
+				Threshold t;
+				HSLImage target;
+				BinaryImage b = target.t;
+				*/
 
+				printf ("Picture resolution is %d, %d\n", raw_info.xRes, raw_info.yRes);
+				printf ("pixels per line: %d\n", raw_info.pixelsPerLine);
 
-				imaqGetImageInfo(frame, &imageinfo);
-				char *pixel = (char*)(imageinfo.imageStart);
-
-				printf ("Picture resolution is %d, %d\n", imageinfo.xRes, imageinfo.yRes);
-				printf ("here is the pixel: %d\n", imageinfo.pixelsPerLine);
-				for (int i = 0; i < 3*640*(480/2); i++){
-					pixel[i] = 0;
-
-
-				}
+				HSLFilter();
 
 
 				CameraServer::GetInstance()->SetImage(frame);
@@ -181,10 +188,22 @@ private:
 		IMAQdxStopAcquisition(session);
 		}
 
-	void TestPeriodic()
-	{
-		lw->Run();
+#define RES_X 640
+#define RES_Y 480
+
+	void HSLFilter(){
+		for (int i = 0; i < (RES_X*RES_Y)/2; i=i+4){
+			char R = raw_pixel[i];
+			char B = raw_pixel[i+1];
+			char G = raw_pixel[i+2];
+			int hue = atan2( sqrt(3)*(G-B), (2*R)-G-B );
+
+			//proc_pixel[(i/4)] = G;
+
+		}
+
 	}
+
 
 	void DisabledInit()
 	{
