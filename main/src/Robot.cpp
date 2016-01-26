@@ -37,6 +37,14 @@ private:
 	char *R, *G, *B;
 	uInt32 numOfAttributes;
 	IMAQdxAttributeInformation *cameraAttributes;
+	uInt32 size;
+	IMAQdxEnumItem *items;
+	IMAQdxEnumItem exposure_mode;
+	int exposure;
+	int brightness;
+	int contrast;
+	int saturation;
+
 
 
 	void RobotInit() override
@@ -59,52 +67,50 @@ private:
 
 
 	void CameraSettings(void){
-		//printf("camera brightness: %d\n",Camera->GetBrightness());
-		//Camera->OpenCamera();
-		//printf("camera brightness: %d\n",Camera->GetBrightness());
-		//Camera->SetBrightness();
-		//Camera->SetExposureManual(0);
-		//Camera->SetWhiteBalanceManual(whiteBalance::kFixedIndoor);
-		//printf("camera brightness: %d\n",Camera->GetBrightness());
-		//Camera->CloseCamera();
-
-
+		//get all attributes
 		IMAQdxEnumerateAttributes2(session, NULL, &numOfAttributes,"" , IMAQdxAttributeVisibilityAdvanced);
 		printf("num of attributes: %d\n", (int)numOfAttributes);
 		cameraAttributes = new IMAQdxAttributeInformation[numOfAttributes];
 		IMAQdxEnumerateAttributes2(session, cameraAttributes, &numOfAttributes, "", IMAQdxAttributeVisibilityAdvanced);
+
+		//get all values
+		IMAQdxEnumerateAttributeValues(session, "CameraAttributes::Exposure::Mode", NULL, &size);
+		printf("num of values: %d\n", (int)size);
+		items = new IMAQdxEnumItem[size];
+		IMAQdxEnumerateAttributeValues(session, "CameraAttributes::Exposure::Mode", items, &size);
+
+/*
 		for (unsigned int i = 0; i < numOfAttributes; i++)
 			printf("Attribute %d (type %d, writable %d): %s\n", i, cameraAttributes[i].Type, cameraAttributes[i].Writable, cameraAttributes[i].Name);
+		for (unsigned int i = 0; i < size; i++)
+			printf("Name: %s\tValue: %d\tReserved: %d\d", items[i].Name, items[i].Value, items[i].Reserved);
+*/
+		IMAQdxGetAttribute(session, "CameraAttributes::Exposure::Mode", IMAQdxValueTypeEnumItem, &exposure_mode);
+		exposure_mode.Value = (uInt32)1;
 
-		int exposure;
-		IMAQdxEnumItem exp_mode;
-		int brightness;
-		IMAQdxEnumItem brt_mode;
-
-		IMAQdxGetAttribute(session, "CameraAttributes::Exposure::Value", IMAQdxValueTypeI64, &exposure);
-		IMAQdxGetAttribute(session, "CameraAttributes::Exposure::Mode", IMAQdxValueTypeEnumItem, &exp_mode);
-		IMAQdxGetAttribute(session, "CameraAttributes::Brightness::Value", IMAQdxValueTypeI64, &brightness);
-		IMAQdxGetAttribute(session, "CameraAttributes::Brightness::Mode", IMAQdxValueTypeEnumItem, &brt_mode);
-
-		printf("Exposure (mode %s(%d)): %d\n", exp_mode.Name, exp_mode.Value, exposure);
-		printf("brightness(mode %s(%d)): %d\n", brt_mode.Name, brt_mode.Value, brightness);
-
-		exp_mode.Value = 2;
-		//IMAQdxSetAttribute(session, "CameraAttributes::Exposure::Mode", IMAQdxValueTypeEnumItem, exp_mode);
-		//IMAQdxSetAttribute(session, "CameraAttributes::Exposure::Value", IMAQdxValueTypeI64, 10);
-		IMAQdxSetAttribute(session, "CameraAttributes::Brightness::Value", IMAQdxValueTypeI64, 210);
+		printf("Imaq error exposure mode: %d\n", IMAQdxSetAttribute(session, "CameraAttributes::Exposure::Mode", IMAQdxValueTypeEnumItem, exposure_mode));
+		printf("Imaq error exposure value: %d\n", IMAQdxSetAttribute(session, "CameraAttributes::Exposure::Value", IMAQdxValueTypeI64, (Int64)2));
+		printf("Imaq error brightness: %d\n", IMAQdxSetAttribute(session, "CameraAttributes::Brightness::Value", IMAQdxValueTypeI64, (Int64)150));
+		printf("Imaq error contrast: %d\n", IMAQdxSetAttribute(session, "CameraAttributes::Contrast::Value", IMAQdxValueTypeI64, (Int64)1));
+		//printf("Imaq error saturation: %d\n", IMAQdxSetAttribute(session, "CameraAttributes::Saturation::Value", IMAQdxValueTypeI64, (Int64)40));
 
 		//check the settings
-		IMAQdxGetAttribute(session, "CameraAttributes::Exposure::Mode", IMAQdxValueTypeEnumItem, &exp_mode);
+		IMAQdxGetAttribute(session, "CameraAttributes::Exposure::Mode", IMAQdxValueTypeEnumItem, &exposure_mode);
+		IMAQdxGetAttribute(session, "CameraAttributes::Exposure::Value", IMAQdxValueTypeI64, &exposure);
 		IMAQdxGetAttribute(session, "CameraAttributes::Brightness::Value", IMAQdxValueTypeI64, &brightness);
+		IMAQdxGetAttribute(session, "CameraAttributes::Contrast::Value", IMAQdxValueTypeI64, &contrast);
+		IMAQdxGetAttribute(session, "CameraAttributes::Saturation::Value", IMAQdxValueTypeI64, &saturation);
 
-		printf("Exposure (mode %s(%d)): %d\n", exp_mode.Name, exp_mode.Value, exposure);
-		printf("brightness(mode %s(%d)): %d\n", brt_mode.Name, brt_mode.Value, brightness);
+
+		printf("exposure (mode %s(%d)): %d\n", exposure_mode.Name, (int)exposure_mode.Value, (int)exposure);
+		printf("brightness: %d\n", (int)brightness);
+		printf("contrast: %d\n", (int)contrast);
+		printf("saturation: %d\n", (int)saturation);
 	}
 
 	void VisionInit(void){
 
-		Camera = new USBCamera("cam0", false);
+		//Camera = new USBCamera("cam0", false);
 
 		//initialize image data structure (no size)
 		frame = imaqCreateImage(IMAQ_IMAGE_RGB, 0);
@@ -130,6 +136,7 @@ private:
 		//the camera name (ex "cam0") can be found through the roborio web interface
 		imaqError = IMAQdxOpenCamera("cam0", IMAQdxCameraControlModeController, &session);
 		CameraSettings();
+
 		if(imaqError != IMAQdxErrorSuccess)
 		{
 			DriverStation::ReportError("IMAQdxOpenCamera error: " + std::to_string((long)imaqError) + "\n");
@@ -219,12 +226,10 @@ private:
 			}
 			else
 			{
-				int exposure;
-				IMAQdxGetAttribute(session, "CameraAttributes::Brightness::Value", IMAQdxValueTypeI64, &exposure);
-				printf("Brightness: %d\n", exposure);
+
 				HSLFilter();
 
-				CameraServer::GetInstance()->SetImage(processed);
+				CameraServer::GetInstance()->SetImage(frame);
 
 			}
 
@@ -236,16 +241,19 @@ private:
 		}
 
 
-#define THRESHOLD 245
+#define THRESHOLD 190
 	void HSLFilter(){
+		//also find COG here and maybe test for u shape
 		for (int i = 0; i < (RES_X*RES_Y); i++){
 			//int hue = atan2( sqrt(3)*(G[i*4]-B[i*4]), (2*R[i*4])-G[i*4]-B[i*4] );
 
-			if (R[i*4] > THRESHOLD)
+
+			if (G[i*4] > THRESHOLD)
 				proc_pixel[i] = 255;
 			else
 				proc_pixel[i] = 0;
 
+			//proc_pixel[i] = G[i*4];
 		}
 
 	}
