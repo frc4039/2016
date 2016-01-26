@@ -44,6 +44,7 @@ private:
 	int brightness;
 	int contrast;
 	int saturation;
+	int cog_x, cog_y, num_of_pixels;
 
 
 
@@ -89,9 +90,9 @@ private:
 		exposure_mode.Value = (uInt32)1;
 
 		printf("Imaq error exposure mode: %d\n", IMAQdxSetAttribute(session, "CameraAttributes::Exposure::Mode", IMAQdxValueTypeEnumItem, exposure_mode));
-		printf("Imaq error exposure value: %d\n", IMAQdxSetAttribute(session, "CameraAttributes::Exposure::Value", IMAQdxValueTypeI64, (Int64)2));
-		printf("Imaq error brightness: %d\n", IMAQdxSetAttribute(session, "CameraAttributes::Brightness::Value", IMAQdxValueTypeI64, (Int64)150));
-		printf("Imaq error contrast: %d\n", IMAQdxSetAttribute(session, "CameraAttributes::Contrast::Value", IMAQdxValueTypeI64, (Int64)1));
+		printf("Imaq error exposure value: %d\n", IMAQdxSetAttribute(session, "CameraAttributes::Exposure::Value", IMAQdxValueTypeI64, (Int64)10));
+		printf("Imaq error brightness: %d\n", IMAQdxSetAttribute(session, "CameraAttributes::Brightness::Value", IMAQdxValueTypeI64, (Int64)220));
+		printf("Imaq error contrast: %d\n", IMAQdxSetAttribute(session, "CameraAttributes::Contrast::Value", IMAQdxValueTypeI64, (Int64)10));
 		//printf("Imaq error saturation: %d\n", IMAQdxSetAttribute(session, "CameraAttributes::Saturation::Value", IMAQdxValueTypeI64, (Int64)40));
 
 		//check the settings
@@ -229,7 +230,7 @@ private:
 
 				HSLFilter();
 
-				CameraServer::GetInstance()->SetImage(frame);
+				CameraServer::GetInstance()->SetImage(processed);
 
 			}
 
@@ -241,20 +242,36 @@ private:
 		}
 
 
-#define THRESHOLD 190
+#define THRESHOLD 40
+#define CIRCLE_SIZE 100
+
 	void HSLFilter(){
 		//also find COG here and maybe test for u shape
+		cog_x = cog_y = num_of_pixels = 0;
+
 		for (int i = 0; i < (RES_X*RES_Y); i++){
 			//int hue = atan2( sqrt(3)*(G[i*4]-B[i*4]), (2*R[i*4])-G[i*4]-B[i*4] );
 
 
-			if (G[i*4] > THRESHOLD)
+			if (G[i*4] > THRESHOLD){
 				proc_pixel[i] = 255;
+				cog_y += i % RES_X;
+				cog_x += (int)(i / RES_X);
+				num_of_pixels++;
+				//printf("cog: (%d,%d) # %d\n", cog_x, cog_y);
+				//Wait(0.1);
+			}
 			else
 				proc_pixel[i] = 0;
 
+
 			//proc_pixel[i] = G[i*4];
 		}
+		cog_x = cog_x / num_of_pixels;
+		cog_y = cog_y / num_of_pixels;
+		//printf("final cog: (%d,%d) # %d\n", cog_x, cog_y, num_of_pixels);
+		if (num_of_pixels > 500)
+			imaqDrawShapeOnImage(processed, processed, {cog_x-100,cog_y-100,200,200}, IMAQ_DRAW_INVERT,IMAQ_SHAPE_OVAL,255);
 
 	}
 
