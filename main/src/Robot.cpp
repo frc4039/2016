@@ -9,10 +9,6 @@ class Robot: public IterativeRobot
 {
 private:
 	LiveWindow *lw = LiveWindow::GetInstance();
-	SendableChooser *chooser;
-	const std::string autoNameDefault = "Default";
-	const std::string autoNameCustom = "My Auto";
-	std::string autoSelected;
 
 	Victor *m_frontLeftDrive; //0
 	Victor *m_frontRightDrive; //1
@@ -35,6 +31,7 @@ private:
 	char proc_array[RES_Y][RES_X];
 	char raw_array[RES_Y][RES_X*4];
 	char *R, *G, *B;
+	RGBValue colourTable;
 	uInt32 numOfAttributes;
 	IMAQdxAttributeInformation *cameraAttributes;
 	uInt32 size;
@@ -44,17 +41,14 @@ private:
 	int brightness;
 	int contrast;
 	int saturation;
+	float64 Gr, Gb, Gg;
 	int cog_x, cog_y, num_of_pixels;
+	int picture_ID;
 
 
 
 	void RobotInit() override
 	{
-		chooser = new SendableChooser();
-		chooser->AddDefault(autoNameDefault, (void*)&autoNameDefault);
-		chooser->AddObject(autoNameCustom, (void*)&autoNameCustom);
-		SmartDashboard::PutData("Auto Modes", chooser);
-
 		m_frontLeftDrive = new Victor(0);
 		m_frontRightDrive = new Victor(1);
 		m_rearLeftDrive = new Victor(2);
@@ -63,9 +57,15 @@ private:
 		m_Joystick = new Joystick(0);
 
 		VisionInit();
-
 	}
 
+#define EXPOSURE (Int64)10
+#define BRIGHTNESS (Int64)150
+#define CONTRAST (Int64)10
+#define SATURATION (Int64)100
+#define R_GAIN (float64)0
+#define G_GAIN (float64)1
+#define B_GAIN (float64)0
 
 	void CameraSettings(void){
 		//get all attributes
@@ -89,11 +89,15 @@ private:
 		IMAQdxGetAttribute(session, "CameraAttributes::Exposure::Mode", IMAQdxValueTypeEnumItem, &exposure_mode);
 		exposure_mode.Value = (uInt32)1;
 
+		//set the settings
 		printf("Imaq error exposure mode: %d\n", IMAQdxSetAttribute(session, "CameraAttributes::Exposure::Mode", IMAQdxValueTypeEnumItem, exposure_mode));
-		printf("Imaq error exposure value: %d\n", IMAQdxSetAttribute(session, "CameraAttributes::Exposure::Value", IMAQdxValueTypeI64, (Int64)10));
-		printf("Imaq error brightness: %d\n", IMAQdxSetAttribute(session, "CameraAttributes::Brightness::Value", IMAQdxValueTypeI64, (Int64)220));
-		printf("Imaq error contrast: %d\n", IMAQdxSetAttribute(session, "CameraAttributes::Contrast::Value", IMAQdxValueTypeI64, (Int64)10));
-		//printf("Imaq error saturation: %d\n", IMAQdxSetAttribute(session, "CameraAttributes::Saturation::Value", IMAQdxValueTypeI64, (Int64)40));
+		printf("Imaq error exposure value: %d\n", IMAQdxSetAttribute(session, "CameraAttributes::Exposure::Value", IMAQdxValueTypeI64, EXPOSURE));
+		printf("Imaq error brightness: %d\n", IMAQdxSetAttribute(session, "CameraAttributes::Brightness::Value", IMAQdxValueTypeI64, BRIGHTNESS));
+		printf("Imaq error contrast: %d\n", IMAQdxSetAttribute(session, "CameraAttributes::Contrast::Value", IMAQdxValueTypeI64, CONTRAST));
+		printf("Imaq error saturation: %d\n", IMAQdxSetAttribute(session, "CameraAttributes::Saturation::Value", IMAQdxValueTypeI64, SATURATION));
+		printf("Imaq error Gain R: %d\n", IMAQdxSetAttribute(session, "AcquisitionAttributes::Bayer::GainR", IMAQdxValueTypeF64, R_GAIN));
+		printf("Imaq error Gain R: %d\n", IMAQdxSetAttribute(session, "AcquisitionAttributes::Bayer::GainG", IMAQdxValueTypeF64, G_GAIN));
+		printf("Imaq error Gain R: %d\n", IMAQdxSetAttribute(session, "AcquisitionAttributes::Bayer::GainB", IMAQdxValueTypeF64, B_GAIN));
 
 		//check the settings
 		IMAQdxGetAttribute(session, "CameraAttributes::Exposure::Mode", IMAQdxValueTypeEnumItem, &exposure_mode);
@@ -101,8 +105,10 @@ private:
 		IMAQdxGetAttribute(session, "CameraAttributes::Brightness::Value", IMAQdxValueTypeI64, &brightness);
 		IMAQdxGetAttribute(session, "CameraAttributes::Contrast::Value", IMAQdxValueTypeI64, &contrast);
 		IMAQdxGetAttribute(session, "CameraAttributes::Saturation::Value", IMAQdxValueTypeI64, &saturation);
-
-
+		IMAQdxGetAttribute(session, "AcquisitionAttributes::Bayer::GainB", IMAQdxValueTypeF64, &Gb);
+		IMAQdxGetAttribute(session, "AcquisitionAttributes::Bayer::GainR", IMAQdxValueTypeF64, &Gr);
+		IMAQdxGetAttribute(session, "AcquisitionAttributes::Bayer::GainG", IMAQdxValueTypeF64, &Gg);
+		printf("RGB gain: %f, %f, %f\n", Gr, Gg, Gb);
 		printf("exposure (mode %s(%d)): %d\n", exposure_mode.Name, (int)exposure_mode.Value, (int)exposure);
 		printf("brightness: %d\n", (int)brightness);
 		printf("contrast: %d\n", (int)contrast);
@@ -132,7 +138,8 @@ private:
 		G = raw_pixel + 1;
 		B = raw_pixel + 2;
 
-
+		colourTable = {255,255,255,0};
+		picture_ID = 0;
 
 		//the camera name (ex "cam0") can be found through the roborio web interface
 		imaqError = IMAQdxOpenCamera("cam0", IMAQdxCameraControlModeController, &session);
@@ -149,8 +156,6 @@ private:
 		{
 			DriverStation::ReportError("IMAQdxConfigureGrab error: " + std::to_string((long)imaqError) + "\n");
 		}
-
-
 	}
 	/**
 	 * This autonomous (along with the chooser code above) shows how to select between different autonomous modes
@@ -163,30 +168,12 @@ private:
 	 */
 	void AutonomousInit()
 	{
-		autoSelected = *((std::string*)chooser->GetSelected());
-		//std::string autoSelected = SmartDashboard::GetString("Auto Selector", autoNameDefault);
-		std::cout << "Auto selected: " << autoSelected << std::endl;
 
-		if(autoSelected == autoNameCustom)
-		{
-			//Custom Auto goes here
-		}
-		else
-		{
-			//Default Auto goes here
-		}
 	}
 
 	void AutonomousPeriodic()
 	{
-		if(autoSelected == autoNameCustom)
-		{
-			//Custom Auto goes here
-		}
-		else
-		{
-			//Default Auto goes here
-		}
+
 	}
 
 	void TeleopInit()
@@ -230,11 +217,16 @@ private:
 
 				HSLFilter();
 
-				CameraServer::GetInstance()->SetImage(processed);
+				CameraServer::GetInstance()->SetImage(frame);
+				if(m_Joystick->GetRawButton(12)){
+					char *filename;
+					sprintf(filename, "/home/lvuser/pic%d.bmp", picture_ID);
+					DriverStation::ReportError("writing picture to file\n");
+					imaqWriteBMPFile(frame, "/home/lvuser/pic.bmp", 30, &colourTable);
+				}
 
 			}
 
-			Wait(0.005);				// wait for a motor update time
 		}
 
 		// stop image acquisition
@@ -242,7 +234,7 @@ private:
 		}
 
 
-#define THRESHOLD 40
+#define THRESHOLD 70
 #define CIRCLE_SIZE 100
 
 	void HSLFilter(){
@@ -272,6 +264,7 @@ private:
 		//printf("final cog: (%d,%d) # %d\n", cog_x, cog_y, num_of_pixels);
 		if (num_of_pixels > 500)
 			imaqDrawShapeOnImage(processed, processed, {cog_x-100,cog_y-100,200,200}, IMAQ_DRAW_INVERT,IMAQ_SHAPE_OVAL,255);
+
 
 	}
 
