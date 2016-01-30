@@ -31,7 +31,7 @@ private:
 	char *proc_pixel;
 	char proc_array[RES_Y][RES_X];
 	char raw_array[RES_Y][RES_X*4];
-	char *R, *G, *B;
+	char *R, *G, *B, *alpha;
 	RGBValue colourTable;
 	uInt32 numOfAttributes;
 	IMAQdxAttributeInformation *cameraAttributes;
@@ -136,8 +136,9 @@ private:
 		R = raw_pixel;
 		G = raw_pixel + 1;
 		B = raw_pixel + 2;
+		alpha = raw_pixel + 3;
 
-		colourTable = {255,255,255,0};
+		colourTable = {255,255,255,255};
 		picture_ID = 0;
 
 		//the camera name (ex "cam0") can be found through the roborio web interface
@@ -182,7 +183,7 @@ private:
 
 	void TeleopPeriodic()
 	{
-		vision->getProcessedImage();
+		TakePicture();
 		lw->Run();
 	}
 
@@ -221,7 +222,7 @@ private:
 					char *filename;
 					sprintf(filename, "/home/lvuser/pic%d.bmp", picture_ID);
 					DriverStation::ReportError("writing picture to file\n");
-					imaqWriteBMPFile(frame, "/home/lvuser/pic.bmp", 30, &colourTable);
+					imaqWriteBMPFile(frame, filename, 30, &colourTable);
 				}
 
 			}
@@ -233,8 +234,12 @@ private:
 		}
 
 
-#define THRESHOLD 70
 #define CIRCLE_SIZE 100
+#define SIMILARITY 10
+#define R_THRESHOLD 100
+#define G_THRESHOLD 70
+#define B_THRESHOLD 100
+
 
 	void HSLFilter(){
 		//also find COG here and maybe test for u shape
@@ -244,19 +249,19 @@ private:
 			//int hue = atan2( sqrt(3)*(G[i*4]-B[i*4]), (2*R[i*4])-G[i*4]-B[i*4] );
 
 
-			if (G[i*4] > THRESHOLD){
+			if ((R[i*4] > R_THRESHOLD) || ((B[i*4] > B_THRESHOLD) && (G[i*4] < G_THRESHOLD))){
+				proc_pixel[i] = 0;
+				//printf("cog: (%d,%d) # %d\n", cog_x, cog_y);
+				}
+			else if (G[i*4] > G_THRESHOLD){
 				proc_pixel[i] = 255;
 				cog_y += i % RES_X;
 				cog_x += (int)(i / RES_X);
 				num_of_pixels++;
-				//printf("cog: (%d,%d) # %d\n", cog_x, cog_y);
-				//Wait(0.1);
 			}
-			else
-				proc_pixel[i] = 0;
 
 
-			//proc_pixel[i] = G[i*4];
+			//proc_pixel[i] = alpha[i*4];
 		}
 		cog_x = cog_x / num_of_pixels;
 		cog_y = cog_y / num_of_pixels;
