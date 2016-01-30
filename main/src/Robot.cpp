@@ -11,12 +11,14 @@ class Robot: public IterativeRobot
 private:
 	LiveWindow *lw = LiveWindow::GetInstance();
 
-	Victor *m_frontLeftDrive; //0
-	Victor *m_frontRightDrive; //1
-	Victor *m_rearLeftDrive; //2
-	Victor *m_rearRightDrive; //3
+	Victor *m_leftDrive4; //0
+	Victor *m_leftDrive1; //1
+	Victor *m_rightDrive2; //2
+	Victor *m_rightDrive3; //3
 
 	Joystick *m_Joystick;
+	Timer *timer;
+	double last_time;
 
 	//=======================Vision Variables======================
 	USBCamera *Camera;
@@ -50,10 +52,10 @@ private:
 
 	void RobotInit() override
 	{
-		m_frontLeftDrive = new Victor(0);
-		m_frontRightDrive = new Victor(1);
-		m_rearLeftDrive = new Victor(2);
-		m_rearRightDrive = new Victor(3);
+		m_leftDrive4 = new Victor(4);
+		m_leftDrive1 = new Victor(1);
+		m_rightDrive2 = new Victor(2);
+		m_rightDrive3 = new Victor(3);
 
 		m_Joystick = new Joystick(0);
 
@@ -178,63 +180,62 @@ private:
 
 	void TeleopInit()
 	{
+		IMAQdxStartAcquisition(session);
 
 	}
 
+#define PICTURE_TIMER 10
 	void TeleopPeriodic()
 	{
-		TakePicture();
-		lw->Run();
+		teleDrive();
+		if (m_Joystick->GetRawButton(10))
+			TakePicture();
+
+		//lw->Run();
 	}
 
-	void teleDrive()
+	inline void teleDrive()
 	{
-		float x = m_Joystick->GetX();
-		float y = m_Joystick->GetY();
+		float leftSpeed = limit(expo(m_Joystick->GetY(), 2), 1) - limit(expo(m_Joystick->GetX(), 3), 1);
+		float rightSpeed = -limit(expo(m_Joystick->GetY(), 2), 1) - limit(expo(m_Joystick->GetX(), 3), 1);
 
-		printf("Joystick x=%f, y=%f\n", x,y);
-		//float leftSpeed = x + y;
-		//float rightSpeed = -x + y;
+		//printf("Joystick x=%f, y=%f\n", x,y);
+		m_leftDrive4->SetSpeed(leftSpeed);
+		m_leftDrive1->SetSpeed(leftSpeed);
+		m_rightDrive2->SetSpeed(rightSpeed);
+		m_rightDrive3->SetSpeed(rightSpeed);
 	}
 
 	void TakePicture()
 	{
 		// acquire images
-		IMAQdxStartAcquisition(session);
 
-	    // grab an image, draw the circle, and provide it for the camera server which will
-	    // in turn send it to the dashboard.
-		while(IsOperatorControl() && IsEnabled())
+		IMAQdxGrab(session, frame, true, NULL);
+
+		if(imaqError != IMAQdxErrorSuccess)
 		{
-			IMAQdxGrab(session, frame, true, NULL);
+			DriverStation::ReportError("IMAQdxGrab error: " + std::to_string((long)imaqError) + "\n");
+		}
+		else
+		{
 
-			if(imaqError != IMAQdxErrorSuccess)
-			{
-				DriverStation::ReportError("IMAQdxGrab error: " + std::to_string((long)imaqError) + "\n");
-			}
-			else
-			{
-
-				HSLFilter();
+			HSLFilter();
 			if (m_Joystick->GetRawButton(11))
 				CameraServer::GetInstance()->SetImage(frame);
 			else
 				CameraServer::GetInstance()->SetImage(processed);
 
-				if(m_Joystick->GetRawButton(12)){
-					char *filename;
-					sprintf(filename, "/home/lvuser/pic%d.bmp", picture_ID);
-					DriverStation::ReportError("writing picture to file\n");
-					imaqWriteBMPFile(frame, filename, 30, &colourTable);
-				}
-
+			if(m_Joystick->GetRawButton(12)){
+				char *filename;
+				sprintf(filename, "/home/lvuser/pic%d.bmp", picture_ID);
+				DriverStation::ReportError("writing picture to file\n");
+				imaqWriteBMPFile(frame, filename, 30, &colourTable);
 			}
 
 		}
 
 		// stop image acquisition
-		IMAQdxStopAcquisition(session);
-		}
+	}
 
 
 #define CIRCLE_SIZE 100
@@ -276,9 +277,31 @@ private:
 
 	}
 
+	float expo(float x, int n)
+	{
+		int sign = n % 2;
+		float y = 1;
+		for (int i = 1; i <= n; i++)
+		{
+			y *= x;
+		}
+		if(sign == 0 && x < 0)
+			return -y;
+		return y;
+	}
+
+	float limit(float x, float lim)
+	{
+		if (x > lim)
+			return lim;
+		else if (x < -lim)
+			return -lim;
+		return x;
+	}
 
 	void DisabledInit()
 	{
+		IMAQdxStopAcquisition(session);
 	}
 
 	void DisabledPeriodic()
