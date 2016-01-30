@@ -216,8 +216,11 @@ private:
 			{
 
 				HSLFilter();
-
+			if (m_Joystick->GetRawButton(11))
 				CameraServer::GetInstance()->SetImage(frame);
+			else
+				CameraServer::GetInstance()->SetImage(processed);
+
 				if(m_Joystick->GetRawButton(12)){
 					char *filename;
 					sprintf(filename, "/home/lvuser/pic%d.bmp", picture_ID);
@@ -259,7 +262,8 @@ private:
 				cog_x += (int)(i / RES_X);
 				num_of_pixels++;
 			}
-
+			else
+				proc_pixel[i] = 0;
 
 			//proc_pixel[i] = alpha[i*4];
 		}
