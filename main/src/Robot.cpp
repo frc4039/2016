@@ -55,6 +55,7 @@ private:
 #define CRITERIA_COUNT 	1
 	ParticleFilterCriteria2 filterCriteria[CRITERIA_COUNT];
 	int num_particlesFound;
+	MeasurementType measurements[1];
 	ROI *roi;
 
 
@@ -137,6 +138,7 @@ private:
 		filterOptions.fillHoles = FALSE;
 		filterOptions.rejectBorder = FALSE;
 		filterOptions.rejectMatches = FALSE;
+		measurements[0] = IMAQ_MT_AREA;
 
 		//common filter config
 		for (int i = 0; i < CRITERIA_COUNT; i++){
@@ -145,9 +147,11 @@ private:
 		}
 
 		//area config
-		filterCriteria[0].parameter = IMAQ_MT_FIRST_PIXEL_X;
-		filterCriteria[0].lower = 0;
-		filterCriteria[0].upper = RES_X;
+		filterCriteria[0].parameter = IMAQ_MT_AREA;
+		filterCriteria[0].lower = 500;
+		filterCriteria[0].upper = 1000000;
+
+
 
 		/*
 		//width config
@@ -231,7 +235,6 @@ private:
 
 	}
 
-#define PICTURE_TIMER 10
 	void TeleopPeriodic()
 	{
 		//teleDrive();
@@ -265,18 +268,27 @@ private:
 		}
 		else
 		{
-
+			//filter image for blob finding
 			HSLFilter();
-			int error = imaqParticleFilter4(particle, processed, filterCriteria, CRITERIA_COUNT, &filterOptions, NULL, &num_particlesFound);
+
+			//find blobs filtered
+			imaqParticleFilter4(particle, processed, filterCriteria, CRITERIA_COUNT, &filterOptions, NULL, &num_particlesFound);
 			//printf("error: %d\tparticles found: %d\n", error, num_particlesFound);
 
-			double resultx, resulty;
+			double rect_left, rect_width, center_mass_y;
+			if (num_particlesFound > 1)
+				DriverStation::ReportError("Warning! Multiple blobs found!");
 			for (int i = 0; i < num_particlesFound; i++)
 			{
-				imaqMeasureParticle(processed, i, FALSE, IMAQ_MT_AREA, &resultx);
+				imaqMeasureParticle(particle, i, FALSE, IMAQ_MT_BOUNDING_RECT_LEFT, &rect_left);
+				imaqMeasureParticle(particle, i, FALSE, IMAQ_MT_BOUNDING_RECT_WIDTH, &rect_width);
+				imaqMeasureParticle(particle, i, FALSE, IMAQ_MT_CENTER_OF_MASS_Y, &center_mass_y);
 				//imaqMeasureParticle(processed, i, FALSE, IMAQ_MT_CENTER_OF_MASS_Y, &resulty);
-				printf("blob %d area: %f\n", i, resultx);
+				//printf("%d blob area: %f\n", particleReport, resultx);
 			}
+			double centerx = rect_left + (rect_width/2);
+			imaqDrawShapeOnImage(processed, processed, {center_mass_y - (rect_width/2), centerx - (rect_width/2), rect_width, rect_width}, IMAQ_DRAW_INVERT,IMAQ_SHAPE_OVAL,255);
+
 
 			if (m_Joystick->GetRawButton(11))
 				CameraServer::GetInstance()->SetImage(frame);
