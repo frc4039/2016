@@ -15,6 +15,7 @@ private:
 	Victor *m_leftDrive1; //1
 	Victor *m_rightDrive2; //2
 	Victor *m_rightDrive3; //3
+	CANTalon *talon;
 
 	Joystick *m_Joystick;
 	Timer *timer;
@@ -26,6 +27,7 @@ private:
 
 	Image *frame;
 	Image *processed;
+	Image *particle;
 	ImageInfo raw_info;
 	ImageInfo proc_info;
 	IMAQdxError imaqError;
@@ -48,6 +50,13 @@ private:
 	int cog_x, cog_y, num_of_pixels;
 	int picture_ID;
 
+	//vision filter options
+	ParticleFilterOptions2 filterOptions;
+#define CRITERIA_COUNT 	1
+	ParticleFilterCriteria2 filterCriteria[CRITERIA_COUNT];
+	int num_particlesFound;
+	ROI *roi;
+
 
 
 	void RobotInit() override
@@ -56,6 +65,8 @@ private:
 		m_leftDrive1 = new Victor(1);
 		m_rightDrive2 = new Victor(2);
 		m_rightDrive3 = new Victor(3);
+
+		//talon = new CANTalon(1);
 
 		m_Joystick = new Joystick(0);
 
@@ -118,15 +129,50 @@ private:
 		printf("saturation: %d\n", (int)saturation);
 	}
 
+	void ParticleFilterInit(void){
+		//options config
+		roi = imaqCreateROI();
+		imaqAddRectContour(roi, imaqMakeRect(0, 0, RES_X, RES_Y));
+		filterOptions.connectivity8 = FALSE;
+		filterOptions.fillHoles = FALSE;
+		filterOptions.rejectBorder = FALSE;
+		filterOptions.rejectMatches = FALSE;
+
+		//common filter config
+		for (int i = 0; i < CRITERIA_COUNT; i++){
+			filterCriteria[i].calibrated = FALSE;
+			filterCriteria[i].exclude = FALSE;
+		}
+
+		//area config
+		filterCriteria[0].parameter = IMAQ_MT_FIRST_PIXEL_X;
+		filterCriteria[0].lower = 0;
+		filterCriteria[0].upper = RES_X;
+
+		/*
+		//width config
+		filterCriteria[1].parameter = IMAQ_MT_BOUNDING_RECT_WIDTH;
+		filterCriteria[1].lower = 1;
+		filterCriteria[1].upper = 100000;
+
+		//height config
+		filterCriteria[2].parameter = IMAQ_MT_BOUNDING_RECT_HEIGHT;
+		filterCriteria[2].lower = 1;
+		filterCriteria[2].upper = 100000;*/
+}
+
 	void VisionInit(void){
 
 		//initialize image data structure (no size)
 		frame = imaqCreateImage(IMAQ_IMAGE_RGB, 0);
 		processed = imaqCreateImage(ImageType::IMAQ_IMAGE_U8,0);
+		particle = imaqCreateImage(ImageType::IMAQ_IMAGE_U8,0);
+
 
 		//initialize image with a size
 		imaqArrayToImage(frame, &raw_array, RES_X, RES_Y);
 		imaqArrayToImage(processed, &proc_array, RES_X, RES_Y);
+		imaqArrayToImage(particle, &proc_array, RES_X, RES_Y);
 
 		//get image pointers and info
 		imaqGetImageInfo(frame, &raw_info);
@@ -146,6 +192,7 @@ private:
 		//the camera name (ex "cam0") can be found through the roborio web interface
 		imaqError = IMAQdxOpenCamera("cam0", IMAQdxCameraControlModeController, &session);
 		CameraSettings();
+		ParticleFilterInit();
 
 		if(imaqError != IMAQdxErrorSuccess)
 		{
@@ -187,8 +234,8 @@ private:
 #define PICTURE_TIMER 10
 	void TeleopPeriodic()
 	{
-		teleDrive();
-		if (m_Joystick->GetRawButton(10))
+		//teleDrive();
+		//if (m_Joystick->GetRawButton(10))
 			TakePicture();
 
 		//lw->Run();
@@ -196,8 +243,8 @@ private:
 
 	inline void teleDrive()
 	{
-		float leftSpeed = limit(expo(m_Joystick->GetY(), 2), 1) - limit(expo(m_Joystick->GetX(), 3), 1);
-		float rightSpeed = -limit(expo(m_Joystick->GetY(), 2), 1) - limit(expo(m_Joystick->GetX(), 3), 1);
+		float leftSpeed = limit(expo(m_Joystick->GetY(), 2), 1) - limit(expo(m_Joystick->GetX(), 5), 1);
+		float rightSpeed = -limit(expo(m_Joystick->GetY(), 2), 1) - limit(expo(m_Joystick->GetX(), 5), 1);
 
 		//printf("Joystick x=%f, y=%f\n", x,y);
 		m_leftDrive4->SetSpeed(leftSpeed);
@@ -220,10 +267,25 @@ private:
 		{
 
 			HSLFilter();
+			int error = imaqParticleFilter4(particle, processed, filterCriteria, CRITERIA_COUNT, &filterOptions, NULL, &num_particlesFound);
+			//printf("error: %d\tparticles found: %d\n", error, num_particlesFound);
+
+			double resultx, resulty;
+			for (int i = 0; i < num_particlesFound; i++)
+			{
+				imaqMeasureParticle(processed, i, FALSE, IMAQ_MT_AREA, &resultx);
+				//imaqMeasureParticle(processed, i, FALSE, IMAQ_MT_CENTER_OF_MASS_Y, &resulty);
+				printf("blob %d area: %f\n", i, resultx);
+			}
+
 			if (m_Joystick->GetRawButton(11))
 				CameraServer::GetInstance()->SetImage(frame);
+			else if (m_Joystick->GetRawButton(9))
+				CameraServer::GetInstance()->SetImage(particle);
 			else
 				CameraServer::GetInstance()->SetImage(processed);
+
+
 
 			if(m_Joystick->GetRawButton(12)){
 				char *filename;
@@ -271,8 +333,8 @@ private:
 		cog_x = cog_x / num_of_pixels;
 		cog_y = cog_y / num_of_pixels;
 		//printf("final cog: (%d,%d) # %d\n", cog_x, cog_y, num_of_pixels);
-		if (num_of_pixels > 500)
-			imaqDrawShapeOnImage(processed, processed, {cog_x-100,cog_y-100,200,200}, IMAQ_DRAW_INVERT,IMAQ_SHAPE_OVAL,255);
+		//if (num_of_pixels > 500)
+			//imaqDrawShapeOnImage(processed, processed, {cog_x-100,cog_y-100,200,200}, IMAQ_DRAW_INVERT,IMAQ_SHAPE_OVAL,255);
 
 
 	}
