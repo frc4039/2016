@@ -54,7 +54,7 @@ private:
 
 	//vision filter options
 	ParticleFilterOptions2 filterOptions;
-#define CRITERIA_COUNT 	1
+#define CRITERIA_COUNT 3
 	ParticleFilterCriteria2 filterCriteria[CRITERIA_COUNT];
 	int num_particlesFound;
 	MeasurementType measurements[1];
@@ -155,16 +155,16 @@ private:
 		filterCriteria[0].lower = 500;
 		filterCriteria[0].upper = 1000000;
 
-		/*
+
 		//width config
 		filterCriteria[1].parameter = IMAQ_MT_BOUNDING_RECT_WIDTH;
 		filterCriteria[1].lower = 1;
-		filterCriteria[1].upper = 100000;
+		filterCriteria[1].upper = 1000000;
 
 		//height config
 		filterCriteria[2].parameter = IMAQ_MT_BOUNDING_RECT_HEIGHT;
 		filterCriteria[2].lower = 1;
-		filterCriteria[2].upper = 100000;*/
+		filterCriteria[2].upper = 1000000;
 }
 
 	void VisionInit(void){
@@ -290,19 +290,19 @@ private:
 			//printf("error: %d\tparticles found: %d\n", error, num_particlesFound);
 
 			double rect_left, rect_width, center_mass_y;
+
 			if (num_particlesFound > 1)
 				DriverStation::ReportError("Warning! Multiple blobs found!");
+
 			for (int i = 0; i < num_particlesFound; i++)
 			{
 				imaqMeasureParticle(particle, i, FALSE, IMAQ_MT_BOUNDING_RECT_LEFT, &rect_left);
 				imaqMeasureParticle(particle, i, FALSE, IMAQ_MT_BOUNDING_RECT_WIDTH, &rect_width);
 				imaqMeasureParticle(particle, i, FALSE, IMAQ_MT_CENTER_OF_MASS_Y, &center_mass_y);
-				//imaqMeasureParticle(processed, i, FALSE, IMAQ_MT_CENTER_OF_MASS_Y, &resulty);
-				//printf("%d blob area: %f\n", particleReport, resultx);
 			}
 			double centerx = rect_left + (rect_width/2);
 			imaqDrawShapeOnImage(processed, processed, {center_mass_y - (rect_width/2), centerx - (rect_width/2), rect_width, rect_width}, IMAQ_DRAW_INVERT,IMAQ_SHAPE_OVAL,255);
-
+			printf("target width, x, y: %f\t%f\t%f\n", rect_width, centerx, center_mass_y);
 
 			if (m_Joystick->GetRawButton(11))
 				CameraServer::GetInstance()->SetImage(frame);
