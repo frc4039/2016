@@ -17,6 +17,8 @@ private:
 	Victor *m_rightDrive3; //3
 	CANTalon *talon;
 
+	Solenoid *m_shiftHigh, *m_shiftLow;
+
 	Joystick *m_Joystick;
 	Timer *timer;
 	double last_time;
@@ -68,6 +70,8 @@ private:
 		m_rightDrive3 = new Victor(3);
 
 		//talon = new CANTalon(1);
+		m_shiftHigh = new Solenoid(0);
+		m_shiftLow = new Solenoid(1);
 
 		m_Joystick = new Joystick(0);
 
@@ -150,8 +154,6 @@ private:
 		filterCriteria[0].parameter = IMAQ_MT_AREA;
 		filterCriteria[0].lower = 500;
 		filterCriteria[0].upper = 1000000;
-
-
 
 		/*
 		//width config
@@ -237,7 +239,8 @@ private:
 
 	void TeleopPeriodic()
 	{
-		//teleDrive();
+		teleDrive();
+		operateShifter();
 		//if (m_Joystick->GetRawButton(10))
 			TakePicture();
 
@@ -254,6 +257,17 @@ private:
 		m_leftDrive1->SetSpeed(leftSpeed);
 		m_rightDrive2->SetSpeed(rightSpeed);
 		m_rightDrive3->SetSpeed(rightSpeed);
+	}
+
+	inline void operateShifter(void){
+		if(m_Joystick->GetRawButton(1)){
+			m_shiftHigh->Set(true);
+			m_shiftLow->Set(false);
+		}
+		else{
+			m_shiftHigh->Set(false);
+			m_shiftLow->Set(true);
+		}
 	}
 
 	void TakePicture()
@@ -300,10 +314,10 @@ private:
 
 
 			if(m_Joystick->GetRawButton(12)){
-				char *filename;
+				char filename[25];
 				sprintf(filename, "/home/lvuser/pic%d.bmp", picture_ID);
 				DriverStation::ReportError("writing picture to file\n");
-				imaqWriteBMPFile(frame, filename, 30, &colourTable);
+				imaqWriteBMPFile(processed, filename, 30, &colourTable);
 			}
 
 		}
