@@ -76,6 +76,7 @@ private:
 		m_Joystick = new Joystick(0);
 
 		VisionInit();
+		IMAQdxStartAcquisition(session);
 	}
 
 #define EXPOSURE (Int64)10
@@ -226,7 +227,7 @@ private:
 
 	void TeleopInit(void)
 	{
-		IMAQdxStartAcquisition(session);
+
 
 	}
 
@@ -263,6 +264,30 @@ private:
 		}
 	}
 
+#define AIM_P 0.0015625f // this is 1/640 to give half power at full error
+#define AIM_E 10
+#define AIM_LIM 0.5
+#define AIM_CORRECTION 0
+#define IMAGE_CENTER 320
+
+	int aimAtTarget(void){
+		int x_pixel = FindTargetCenter();
+		if(x_pixel > 0){
+			float turn = limit(AIM_P * (320 - x_pixel), AIM_LIM);
+			m_leftDrive4->SetSpeed(-turn);
+			m_leftDrive1->SetSpeed(-turn);
+			m_rightDrive2->SetSpeed(turn);
+			m_rightDrive3->SetSpeed(turn);
+		}
+
+		if((320 - x_pixel) < AIM_E && (320 - x_pixel) > -AIM_E){
+			printf("SHOOT THE BALL!!!\n");
+			return 1;
+		}
+		printf("Do not shoot yet.\n");
+		return 0;
+	}
+
 	int FindTargetCenter(void)
 	{
 		// acquire images
@@ -283,13 +308,15 @@ private:
 
 
 			if (num_particlesFound > 1){
-				DriverStation::ReportError("Warning! Multiple blobs found!");
+				DriverStation::ReportError("ERROR! Multiple blobs found!\n");
 				//unsure which blob is target
 				return -2;
 			}
-			else if (num_particlesFound == 0)
+			else if (num_particlesFound == 0){
 				//unable to find target
+				DriverStation::ReportError("ERROR! Target not found!\n");
 				return -3;
+			}
 			else if (num_particlesFound == 1){
 				//take measurements
 				imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_BOUNDING_RECT_LEFT, &rect_left);
@@ -299,8 +326,10 @@ private:
 				//find center based on width
 				centerx = rect_left + (rect_width/2);
 
-				//optional draw circle for visual confirmation
-				imaqDrawShapeOnImage(processed, processed, {(int)(center_mass_y - (rect_width/2.f)), (int)(centerx - (rect_width/2.f)), (int)rect_width, (int)rect_width}, IMAQ_DRAW_INVERT,IMAQ_SHAPE_OVAL,0);
+				//optional draw circle, or reference lines for visual confirmation
+				//imaqDrawShapeOnImage(processed, processed, {(int)(center_mass_y - (rect_width/2.f)), (int)(centerx - (rect_width/2.f)), (int)rect_width, (int)rect_width}, IMAQ_DRAW_INVERT,IMAQ_SHAPE_OVAL,0);
+				imaqDrawShapeOnImage(processed, processed, {0, IMAGE_CENTER+AIM_CORRECTION, RES_Y, 1}, IMAQ_DRAW_INVERT, IMAQ_SHAPE_RECT, 0);
+				imaqDrawShapeOnImage(processed, processed, {(int)(center_mass_y - rect_width/2.f), (int)centerx, (int)(rect_width/2), 1}, IMAQ_DRAW_INVERT, IMAQ_SHAPE_RECT, 0);
 				//printf("target width, x, y: %f\t%f\t%f\n", rect_width, centerx, center_mass_y);
 			}
 
@@ -318,6 +347,7 @@ private:
 			return centerx;
 		}
 		// unable to take picture, return error
+		DriverStation::ReportError("ERROR! Unable to take picture!\n");
 		return -1;
 	}
 
@@ -341,21 +371,7 @@ private:
 		}
 	}
 
-#define AIM_P 0.0015625f // this is 1/640 to give half power at full error
-#define AIM_E 10
-#define AIM_LIM 0.5
-	int aimAtTarget(void){
-		int x_pixel = FindTargetCenter();
-		float turn = limit(AIM_P * (320 - x_pixel), AIM_LIM);
-		m_leftDrive4->SetSpeed(-turn);
-		m_leftDrive1->SetSpeed(-turn);
-		m_rightDrive2->SetSpeed(turn);
-		m_rightDrive3->SetSpeed(turn);
 
-		if((320 - x_pixel) < AIM_E && (320 - x_pixel) > -AIM_E)
-			return 1;
-		return 0;
-	}
 
 	float expo(float x, int n)
 	{
@@ -385,11 +401,12 @@ private:
 
 	void DisabledInit()
 	{
-		IMAQdxStopAcquisition(session);
+		//IMAQdxStopAcquisition(session);
 	}
 
 	void DisabledPeriodic()
 	{
+		FindTargetCenter();
 	}
 };
 
