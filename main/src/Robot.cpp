@@ -49,7 +49,7 @@ private:
 	float64 Gr, Gb, Gg;
 	int picture_ID;
 	char filename[25];
-	double rect_left, rect_width, center_mass_y, centerx;
+	double rect_left, rect_width, center_mass_y, centerx, last_turn;
 
 
 	//vision filter options
@@ -58,7 +58,6 @@ private:
 	ParticleFilterCriteria2 filterCriteria[CRITERIA_COUNT];
 	int num_particlesFound;
 	MeasurementType measurements[1];
-	ROI *roi;
 
 
 
@@ -76,7 +75,7 @@ private:
 		m_Joystick = new Joystick(0);
 
 		VisionInit();
-		IMAQdxStartAcquisition(session);
+
 	}
 
 #define EXPOSURE (Int64)10
@@ -161,10 +160,12 @@ private:
 		//height config
 		filterCriteria[2].parameter = IMAQ_MT_BOUNDING_RECT_HEIGHT;
 		filterCriteria[2].lower = 50;
-		filterCriteria[2].upper = 100;
+		filterCriteria[2].upper = 200;
 
 		//add perimeter filter
-		//IMAQ_MT_PERIMETER
+		//filterCriteria[3].parameter = IMAQ_MT_PERIMETER;
+		//filterCriteria[3].lower = 50;
+		//filterCriteria[3].upper = 100;
 }
 
 	void VisionInit(void){
@@ -194,6 +195,7 @@ private:
 		//misc set up
 		colourTable = {255,255,255,255};
 		picture_ID = 0;
+		last_turn = 0;
 
 		//the camera name (ex "cam0") can be found through the roborio web interface
 		imaqError = IMAQdxOpenCamera("cam0", IMAQdxCameraControlModeController, &session);
@@ -215,6 +217,18 @@ private:
 		}
 	}
 
+	//======================================END OF INIT=======================================================
+	void DisabledInit()
+	{
+		IMAQdxStopAcquisition(session);
+	}
+
+	void DisabledPeriodic()
+	{
+		//FindTargetCenter();
+	}
+
+	//==========================================AUTONOMOUS====================================================
 	void AutonomousInit(void)
 	{
 
@@ -225,26 +239,27 @@ private:
 
 	}
 
+	//===========================================================TELEOP=======================================
 	void TeleopInit(void)
 	{
-
-
+		IMAQdxStartAcquisition(session);
 	}
 
 	void TeleopPeriodic(void)
 	{
-		teleDrive();
-		operateShifter();
-		if (m_Joystick->GetRawButton(10))
-			aimAtTarget();
+		//teleDrive();
+		//operateShifter();
+		//if (m_Joystick->GetRawButton(10))
+			//aimAtTarget();
+		FindTargetCenter();
 
 		//lw->Run();
 	}
 
 	inline void teleDrive(void)
 	{
-		leftSpeed = limit(expo(m_Joystick->GetY(), 2), 1) - limit(expo(m_Joystick->GetX(), 5), 1);
-		rightSpeed = -limit(expo(m_Joystick->GetY(), 2), 1) - limit(expo(m_Joystick->GetX(), 5), 1);
+		leftSpeed = limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 5), 1), 0.75f);
+		rightSpeed = -limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 5), 1), 0.75f);
 
 		//printf("Joystick x=%f, y=%f\n", x,y);
 		m_leftDrive4->SetSpeed(leftSpeed);
@@ -264,27 +279,38 @@ private:
 		}
 	}
 
-#define AIM_P 0.0015625f // this is 1/640 to give half power at full error
+#define AIM_P 0.003f
 #define AIM_E 10
 #define AIM_LIM 0.5
 #define AIM_CORRECTION 0
-#define IMAGE_CENTER 320
+#define AIM_FILTER 0.5
 
+#define IMAGE_CENTER 320
 	int aimAtTarget(void){
 		int x_pixel = FindTargetCenter();
+		float turn;
+		float error = IMAGE_CENTER + AIM_CORRECTION - x_pixel;
 		if(x_pixel > 0){
-			float turn = limit(AIM_P * (320 - x_pixel), AIM_LIM);
-			m_leftDrive4->SetSpeed(-turn);
-			m_leftDrive1->SetSpeed(-turn);
-			m_rightDrive2->SetSpeed(turn);
-			m_rightDrive3->SetSpeed(turn);
-		}
+			turn = limit(AIM_P * error, AIM_LIM);
+			turn = AIM_FILTER*(turn - last_turn) + last_turn;
+			last_turn = turn;
 
-		if((320 - x_pixel) < AIM_E && (320 - x_pixel) > -AIM_E){
-			printf("SHOOT THE BALL!!!\n");
+			//SmartDashboard::PutNumber("Aim Error", IMAGE_CENTER + AIM_CORRECTION - x_pixel);
+			//SmartDashboard::PutNumber("Motor Output", turn);
+		}
+		else
+			turn = 0;
+
+		m_leftDrive4->SetSpeed(turn);
+		m_leftDrive1->SetSpeed(turn);
+		m_rightDrive2->SetSpeed(turn);
+		m_rightDrive3->SetSpeed(turn);
+
+		if((error) < AIM_E && (error) > -AIM_E){
+			//printf("SHOOT THE BALL!!!\n");
 			return 1;
 		}
-		printf("Do not shoot yet.\n");
+		//printf("Do not shoot yet.\n");
 		return 0;
 	}
 
@@ -306,15 +332,16 @@ private:
 			//find filtered blobs
 			imaqParticleFilter4(particle, processed, filterCriteria, CRITERIA_COUNT, &filterOptions, NULL, &num_particlesFound);
 
-
 			if (num_particlesFound > 1){
 				DriverStation::ReportError("ERROR! Multiple blobs found!\n");
+				CameraServer::GetInstance()->SetImage(processed);
 				//unsure which blob is target
 				return -2;
 			}
 			else if (num_particlesFound == 0){
 				//unable to find target
 				DriverStation::ReportError("ERROR! Target not found!\n");
+				CameraServer::GetInstance()->SetImage(frame);
 				return -3;
 			}
 			else if (num_particlesFound == 1){
@@ -323,13 +350,16 @@ private:
 				imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_BOUNDING_RECT_WIDTH, &rect_width);
 				imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_CENTER_OF_MASS_Y, &center_mass_y);
 
+				showBlobMeasurements();
+
 				//find center based on width
 				centerx = rect_left + (rect_width/2);
 
 				//optional draw circle, or reference lines for visual confirmation
 				//imaqDrawShapeOnImage(processed, processed, {(int)(center_mass_y - (rect_width/2.f)), (int)(centerx - (rect_width/2.f)), (int)rect_width, (int)rect_width}, IMAQ_DRAW_INVERT,IMAQ_SHAPE_OVAL,0);
-				imaqDrawShapeOnImage(processed, processed, {0, IMAGE_CENTER+AIM_CORRECTION, RES_Y, 1}, IMAQ_DRAW_INVERT, IMAQ_SHAPE_RECT, 0);
+				imaqDrawShapeOnImage(processed, processed, {0, IMAGE_CENTER+AIM_CORRECTION, RES_Y-1, 1}, IMAQ_DRAW_INVERT, IMAQ_SHAPE_RECT, 0);
 				imaqDrawShapeOnImage(processed, processed, {(int)(center_mass_y - rect_width/2.f), (int)centerx, (int)(rect_width/2), 1}, IMAQ_DRAW_INVERT, IMAQ_SHAPE_RECT, 0);
+				SmartDashboard::PutNumber("target center", centerx);
 				//printf("target width, x, y: %f\t%f\t%f\n", rect_width, centerx, center_mass_y);
 			}
 
@@ -351,29 +381,41 @@ private:
 		return -1;
 	}
 
+	void showBlobMeasurements(void){
+		double width, left, area, perimeter;
+		imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_BOUNDING_RECT_WIDTH, &width);
+		imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_BOUNDING_RECT_LEFT, &left);
+		imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_AREA, &area);
+		imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_PERIMETER, &perimeter);
+
+		printf("width: %d\tleft: %d\tarea: %d\tperimeter: %d\n", (int)width, (int)left, (int)area, (int)perimeter);
+	}
 
 #define R_THRESHOLD 100
-#define G_THRESHOLD 50
+#define G_THRESHOLD 60
 #define B_THRESHOLD 100
-	void BinaryFilter(void){
+	inline void BinaryFilter(void){
 		for (int i = 0; i < (RES_X*RES_Y); i++){
-			//if it has lots of red, or blue without green
-			if ((R[i*4] > R_THRESHOLD) || ((B[i*4] > B_THRESHOLD) && (G[i*4] < G_THRESHOLD))){
+			//if it has lots of red
+			if ((R[i*4] > R_THRESHOLD)){
 				proc_pixel[i] = 0;
-				}
+			}
+			//blue without green
+			else if (((B[i*4] > B_THRESHOLD) && (G[i*4] < G_THRESHOLD))){
+				printf("eliminating pixel BG: %d, %d\n", B[i*4], G[i*4]);
+				proc_pixel[i] = 0;
+			}
 			//if lots of green
-			else if (G[i*4] > G_THRESHOLD){
+			else if ((G[i*4] > G_THRESHOLD)){
+				//printf("got green pixel: %d\n", G[i*4]);
 				proc_pixel[i] = 255;
 			}
 			else
 				proc_pixel[i] = 0;
-			//proc_pixel[i] = alpha[i*4];
 		}
 	}
 
-
-
-	float expo(float x, int n)
+	inline float expo(float x, int n)
 	{
 		int sign = n % 2;
 		float y = 1;
@@ -399,15 +441,6 @@ private:
 		return x;
 	}
 
-	void DisabledInit()
-	{
-		//IMAQdxStopAcquisition(session);
-	}
-
-	void DisabledPeriodic()
-	{
-		FindTargetCenter();
-	}
 };
 
 START_ROBOT_CLASS(Robot)
