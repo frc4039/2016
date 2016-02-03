@@ -158,13 +158,13 @@ private:
 
 		//width config
 		filterCriteria[1].parameter = IMAQ_MT_BOUNDING_RECT_WIDTH;
-		filterCriteria[1].lower = 1;
-		filterCriteria[1].upper = 1000000;
+		filterCriteria[1].lower = 60;
+		filterCriteria[1].upper = 200;
 
 		//height config
 		filterCriteria[2].parameter = IMAQ_MT_BOUNDING_RECT_HEIGHT;
-		filterCriteria[2].lower = 1;
-		filterCriteria[2].upper = 1000000;
+		filterCriteria[2].lower = 50;
+		filterCriteria[2].upper = 100;
 }
 
 	void VisionInit(void){
@@ -326,10 +326,8 @@ private:
 	}
 
 
-#define CIRCLE_SIZE 100
-#define SIMILARITY 10
 #define R_THRESHOLD 100
-#define G_THRESHOLD 70
+#define G_THRESHOLD 50
 #define B_THRESHOLD 100
 
 
