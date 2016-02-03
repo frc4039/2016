@@ -1,7 +1,5 @@
 #include "WPILib.h"
-#include <USBCamera.h>
 #include <math.h>
-#include "USBVision.h"
 
 #define RES_X 640
 #define RES_Y 480
@@ -15,6 +13,7 @@ private:
 	Victor *m_leftDrive1; //1
 	Victor *m_rightDrive2; //2
 	Victor *m_rightDrive3; //3
+	float leftSpeed, rightSpeed;
 	CANTalon *talon;
 
 	Solenoid *m_shiftHigh, *m_shiftLow;
@@ -24,9 +23,7 @@ private:
 	double last_time;
 
 	//=======================Vision Variables======================
-	USBCamera *Camera;
 	IMAQdxSession session;
-
 	Image *frame;
 	Image *processed;
 	Image *particle;
@@ -49,8 +46,10 @@ private:
 	int contrast;
 	int saturation;
 	float64 Gr, Gb, Gg;
-	int cog_x, cog_y, num_of_pixels;
 	int picture_ID;
+	char filename[25];
+	double rect_left, rect_width, center_mass_y, centerx;
+
 
 	//vision filter options
 	ParticleFilterOptions2 filterOptions;
@@ -62,7 +61,7 @@ private:
 
 
 
-	void RobotInit() override
+	void RobotInit(void) override
 	{
 		m_leftDrive4 = new Victor(4);
 		m_leftDrive1 = new Victor(1);
@@ -136,13 +135,10 @@ private:
 
 	void ParticleFilterInit(void){
 		//options config
-		roi = imaqCreateROI();
-		imaqAddRectContour(roi, imaqMakeRect(0, 0, RES_X, RES_Y));
 		filterOptions.connectivity8 = FALSE;
-		filterOptions.fillHoles = FALSE;
+		filterOptions.fillHoles = TRUE;
 		filterOptions.rejectBorder = FALSE;
 		filterOptions.rejectMatches = FALSE;
-		measurements[0] = IMAQ_MT_AREA;
 
 		//common filter config
 		for (int i = 0; i < CRITERIA_COUNT; i++){
@@ -155,7 +151,6 @@ private:
 		filterCriteria[0].lower = 500;
 		filterCriteria[0].upper = 1000000;
 
-
 		//width config
 		filterCriteria[1].parameter = IMAQ_MT_BOUNDING_RECT_WIDTH;
 		filterCriteria[1].lower = 60;
@@ -165,6 +160,9 @@ private:
 		filterCriteria[2].parameter = IMAQ_MT_BOUNDING_RECT_HEIGHT;
 		filterCriteria[2].lower = 50;
 		filterCriteria[2].upper = 100;
+
+		//add perimeter filter
+		//IMAQ_MT_PERIMETER
 }
 
 	void VisionInit(void){
@@ -173,7 +171,6 @@ private:
 		frame = imaqCreateImage(IMAQ_IMAGE_RGB, 0);
 		processed = imaqCreateImage(ImageType::IMAQ_IMAGE_U8,0);
 		particle = imaqCreateImage(ImageType::IMAQ_IMAGE_U8,0);
-
 
 		//initialize image with a size
 		imaqArrayToImage(frame, &raw_array, RES_X, RES_Y);
@@ -192,11 +189,14 @@ private:
 		B = raw_pixel + 2;
 		alpha = raw_pixel + 3;
 
+		//misc set up
 		colourTable = {255,255,255,255};
 		picture_ID = 0;
 
 		//the camera name (ex "cam0") can be found through the roborio web interface
 		imaqError = IMAQdxOpenCamera("cam0", IMAQdxCameraControlModeController, &session);
+
+		//initialize capture settings and filters
 		CameraSettings();
 		ParticleFilterInit();
 
@@ -221,36 +221,36 @@ private:
 	 * You can add additional auto modes by adding additional comparisons to the if-else structure below with additional strings.
 	 * If using the SendableChooser make sure to add them to the chooser code above as well.
 	 */
-	void AutonomousInit()
+	void AutonomousInit(void)
 	{
 
 	}
 
-	void AutonomousPeriodic()
+	void AutonomousPeriodic(void)
 	{
 
 	}
 
-	void TeleopInit()
+	void TeleopInit(void)
 	{
 		IMAQdxStartAcquisition(session);
 
 	}
 
-	void TeleopPeriodic()
+	void TeleopPeriodic(void)
 	{
 		teleDrive();
 		operateShifter();
-		//if (m_Joystick->GetRawButton(10))
-			TakePicture();
+		if (m_Joystick->GetRawButton(10))
+			aimAtTarget();
 
 		//lw->Run();
 	}
 
-	inline void teleDrive()
+	inline void teleDrive(void)
 	{
-		float leftSpeed = limit(expo(m_Joystick->GetY(), 2), 1) - limit(expo(m_Joystick->GetX(), 5), 1);
-		float rightSpeed = -limit(expo(m_Joystick->GetY(), 2), 1) - limit(expo(m_Joystick->GetX(), 5), 1);
+		leftSpeed = limit(expo(m_Joystick->GetY(), 2), 1) - limit(expo(m_Joystick->GetX(), 5), 1);
+		rightSpeed = -limit(expo(m_Joystick->GetY(), 2), 1) - limit(expo(m_Joystick->GetX(), 5), 1);
 
 		//printf("Joystick x=%f, y=%f\n", x,y);
 		m_leftDrive4->SetSpeed(leftSpeed);
@@ -270,7 +270,7 @@ private:
 		}
 	}
 
-	void TakePicture()
+	int FindTargetCenter(void)
 	{
 		// acquire images
 
@@ -283,84 +283,85 @@ private:
 		else
 		{
 			//filter image for blob finding
-			HSLFilter();
+			BinaryFilter();
 
-			//find blobs filtered
+			//find filtered blobs
 			imaqParticleFilter4(particle, processed, filterCriteria, CRITERIA_COUNT, &filterOptions, NULL, &num_particlesFound);
-			//printf("error: %d\tparticles found: %d\n", error, num_particlesFound);
 
-			double rect_left, rect_width, center_mass_y;
 
-			if (num_particlesFound > 1)
+			if (num_particlesFound > 1){
 				DriverStation::ReportError("Warning! Multiple blobs found!");
-
-			for (int i = 0; i < num_particlesFound; i++)
-			{
-				imaqMeasureParticle(particle, i, FALSE, IMAQ_MT_BOUNDING_RECT_LEFT, &rect_left);
-				imaqMeasureParticle(particle, i, FALSE, IMAQ_MT_BOUNDING_RECT_WIDTH, &rect_width);
-				imaqMeasureParticle(particle, i, FALSE, IMAQ_MT_CENTER_OF_MASS_Y, &center_mass_y);
+				//unsure which blob is target
+				return -2;
 			}
-			double centerx = rect_left + (rect_width/2);
-			imaqDrawShapeOnImage(processed, processed, {center_mass_y - (rect_width/2), centerx - (rect_width/2), rect_width, rect_width}, IMAQ_DRAW_INVERT,IMAQ_SHAPE_OVAL,255);
-			printf("target width, x, y: %f\t%f\t%f\n", rect_width, centerx, center_mass_y);
+			else if (num_particlesFound == 0)
+				//unable to find target
+				return -3;
+			else if (num_particlesFound == 1){
+				//take measurements
+				imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_BOUNDING_RECT_LEFT, &rect_left);
+				imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_BOUNDING_RECT_WIDTH, &rect_width);
+				imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_CENTER_OF_MASS_Y, &center_mass_y);
+
+				//find center based on width
+				centerx = rect_left + (rect_width/2);
+
+				//optional draw circle for visual confirmation
+				imaqDrawShapeOnImage(processed, processed, {(int)(center_mass_y - (rect_width/2.f)), (int)(centerx - (rect_width/2.f)), (int)rect_width, (int)rect_width}, IMAQ_DRAW_INVERT,IMAQ_SHAPE_OVAL,0);
+				//printf("target width, x, y: %f\t%f\t%f\n", rect_width, centerx, center_mass_y);
+			}
 
 			if (m_Joystick->GetRawButton(11))
 				CameraServer::GetInstance()->SetImage(frame);
-			else if (m_Joystick->GetRawButton(9))
-				CameraServer::GetInstance()->SetImage(particle);
 			else
 				CameraServer::GetInstance()->SetImage(processed);
 
-
-
 			if(m_Joystick->GetRawButton(12)){
-				char filename[25];
 				sprintf(filename, "/home/lvuser/pic%d.bmp", picture_ID);
 				DriverStation::ReportError("writing picture to file\n");
 				imaqWriteBMPFile(processed, filename, 30, &colourTable);
 			}
 
+			return centerx;
 		}
-
-		// stop image acquisition
+		// unable to take picture, return error
+		return -1;
 	}
 
 
 #define R_THRESHOLD 100
 #define G_THRESHOLD 50
 #define B_THRESHOLD 100
-
-
-	void HSLFilter(){
-		//also find COG here and maybe test for u shape
-		cog_x = cog_y = num_of_pixels = 0;
-
+	void BinaryFilter(void){
 		for (int i = 0; i < (RES_X*RES_Y); i++){
-			//int hue = atan2( sqrt(3)*(G[i*4]-B[i*4]), (2*R[i*4])-G[i*4]-B[i*4] );
-
-
+			//if it has lots of red, or blue without green
 			if ((R[i*4] > R_THRESHOLD) || ((B[i*4] > B_THRESHOLD) && (G[i*4] < G_THRESHOLD))){
 				proc_pixel[i] = 0;
-				//printf("cog: (%d,%d) # %d\n", cog_x, cog_y);
 				}
+			//if lots of green
 			else if (G[i*4] > G_THRESHOLD){
 				proc_pixel[i] = 255;
-				cog_y += i % RES_X;
-				cog_x += (int)(i / RES_X);
-				num_of_pixels++;
 			}
 			else
 				proc_pixel[i] = 0;
-
 			//proc_pixel[i] = alpha[i*4];
 		}
-		cog_x = cog_x / num_of_pixels;
-		cog_y = cog_y / num_of_pixels;
-		//printf("final cog: (%d,%d) # %d\n", cog_x, cog_y, num_of_pixels);
-		//if (num_of_pixels > 500)
-			//imaqDrawShapeOnImage(processed, processed, {cog_x-100,cog_y-100,200,200}, IMAQ_DRAW_INVERT,IMAQ_SHAPE_OVAL,255);
+	}
 
+#define AIM_P 0.0015625f // this is 1/640 to give half power at full error
+#define AIM_E 10
+#define AIM_LIM 0.5
+	int aimAtTarget(void){
+		int x_pixel = FindTargetCenter();
+		float turn = limit(AIM_P * (320 - x_pixel), AIM_LIM);
+		m_leftDrive4->SetSpeed(-turn);
+		m_leftDrive1->SetSpeed(-turn);
+		m_rightDrive2->SetSpeed(turn);
+		m_rightDrive3->SetSpeed(turn);
 
+		if((320 - x_pixel) < AIM_E && (320 - x_pixel) > -AIM_E)
+			return 1;
+		return 0;
 	}
 
 	float expo(float x, int n)
@@ -376,7 +377,11 @@ private:
 		return y;
 	}
 
-	float limit(float x, float lim)
+	inline float scale(float x, float scale){
+		return x * scale;
+	}
+
+	inline float limit(float x, float lim)
 	{
 		if (x > lim)
 			return lim;
