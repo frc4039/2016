@@ -15,7 +15,7 @@ private:
 	Victor *m_rightDrive2; //2
 	Victor *m_rightDrive3; //3
 	float leftSpeed, rightSpeed;
-	CANTalon *talon;
+	CANTalon *shooter1, *shooter2;
 
 	Solenoid *m_shiftHigh, *m_shiftLow;
 
@@ -59,8 +59,7 @@ private:
 	int num_particlesFound;
 	MeasurementType measurements[1];
 
-
-
+//====================================================INIT==============================================
 	void RobotInit(void) override
 	{
 		m_leftDrive4 = new Victor(4);
@@ -155,12 +154,12 @@ private:
 		//width config
 		filterCriteria[1].parameter = IMAQ_MT_BOUNDING_RECT_WIDTH;
 		filterCriteria[1].lower = 60;
-		filterCriteria[1].upper = 200;
+		filterCriteria[1].upper = 300;
 
 		//height config
 		filterCriteria[2].parameter = IMAQ_MT_BOUNDING_RECT_HEIGHT;
 		filterCriteria[2].lower = 50;
-		filterCriteria[2].upper = 200;
+		filterCriteria[2].upper = 300;
 
 		//add perimeter filter
 		//filterCriteria[3].parameter = IMAQ_MT_PERIMETER;
@@ -228,7 +227,7 @@ private:
 		//FindTargetCenter();
 	}
 
-	//==========================================AUTONOMOUS====================================================
+	//========================================================AUTONOMOUS=======================================
 	void AutonomousInit(void)
 	{
 
@@ -256,6 +255,7 @@ private:
 		//lw->Run();
 	}
 
+	//==========================================================USER FUNCTIONS=================================
 	inline void teleDrive(void)
 	{
 		leftSpeed = limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 5), 1), 0.75f);
@@ -279,6 +279,7 @@ private:
 		}
 	}
 
+	//===============================================VISION FUNCTIONS=============================================
 #define AIM_P 0.003f
 #define AIM_E 10
 #define AIM_LIM 0.5
@@ -415,6 +416,7 @@ private:
 		}
 	}
 
+	//=============================================MATHY FUNCTIONS=======================================
 	inline float expo(float x, int n)
 	{
 		int sign = n % 2;
