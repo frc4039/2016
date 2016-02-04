@@ -73,6 +73,9 @@ private:
 
 		m_Joystick = new Joystick(0);
 
+		shooter1 = new CANTalon(0);
+		shooter2 = new CANTalon(1);
+
 		VisionInit();
 
 	}
@@ -246,11 +249,12 @@ private:
 
 	void TeleopPeriodic(void)
 	{
-		//teleDrive();
-		//operateShifter();
+		teleDrive();
+		operateShifter();
+		simpleShoot();
 		//if (m_Joystick->GetRawButton(10))
 			//aimAtTarget();
-		FindTargetCenter();
+		//FindTargetCenter();
 
 		//lw->Run();
 	}
@@ -276,6 +280,17 @@ private:
 		else{
 			m_shiftHigh->Set(false);
 			m_shiftLow->Set(true);
+		}
+	}
+#define SIMPLE_SHOOT_SPEED 1
+	inline void simpleShoot(void){
+		if (m_Joystick->GetRawButton(3)){
+			shooter1->SetSetpoint(-SIMPLE_SHOOT_SPEED);
+			shooter2->SetSetpoint(SIMPLE_SHOOT_SPEED);
+		}
+		else{
+			shooter1->SetSetpoint(0.0);
+			shooter2->SetSetpoint(0.0);
 		}
 	}
 
