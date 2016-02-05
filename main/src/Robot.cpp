@@ -16,6 +16,7 @@ private:
 	Victor *m_rightDrive3; //3
 	float leftSpeed, rightSpeed;
 	CANTalon *shooter1, *shooter2;
+	Relay *m_LED;
 
 	Solenoid *m_shiftHigh, *m_shiftLow;
 
@@ -75,6 +76,8 @@ private:
 
 		shooter1 = new CANTalon(0);
 		shooter2 = new CANTalon(1);
+
+		m_LED = new Relay(0);
 
 		VisionInit();
 
@@ -223,6 +226,7 @@ private:
 	void DisabledInit()
 	{
 		IMAQdxStopAcquisition(session);
+		m_LED->Set(Relay::kOff);
 	}
 
 	void DisabledPeriodic()
@@ -245,6 +249,7 @@ private:
 	void TeleopInit(void)
 	{
 		IMAQdxStartAcquisition(session);
+		m_LED->Set(Relay::kForward);
 	}
 
 	void TeleopPeriodic(void)
@@ -282,7 +287,7 @@ private:
 			m_shiftLow->Set(true);
 		}
 	}
-#define SIMPLE_SHOOT_SPEED 1
+#define SIMPLE_SHOOT_SPEED 0.8225
 	inline void simpleShoot(void){
 		if (m_Joystick->GetRawButton(3)){
 			shooter1->SetSetpoint(-SIMPLE_SHOOT_SPEED);
