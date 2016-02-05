@@ -18,6 +18,8 @@ private:
 	CANTalon *shooter1, *shooter2;
 	Relay *m_LED;
 
+	VictorSP *m_intake;
+
 	Solenoid *m_shiftHigh, *m_shiftLow;
 
 	Joystick *m_Joystick;
@@ -76,6 +78,8 @@ private:
 
 		shooter1 = new CANTalon(0);
 		shooter2 = new CANTalon(1);
+
+		m_intake = new VictorSP(5);
 
 		m_LED = new Relay(0);
 
@@ -296,6 +300,17 @@ private:
 		else{
 			shooter1->SetSetpoint(0.0);
 			shooter2->SetSetpoint(0.0);
+		}
+
+#define SPEED 0.5
+		if(m_Joystick->GetRawButton(7)){
+			m_intake->SetSpeed(SPEED);
+		}
+		else if (m_Joystick->GetRawButton(8)){
+			m_intake->SetSpeed(-SPEED);
+		}
+		else{
+			m_intake->SetSpeed(0.0f);
 		}
 	}
 
