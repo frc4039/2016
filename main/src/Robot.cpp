@@ -291,11 +291,15 @@ private:
 			m_shiftLow->Set(true);
 		}
 	}
-#define SIMPLE_SHOOT_SPEED 0.8225
+#define SIMPLE_SHOOT_SPEED 0.8225f
 	inline void simpleShoot(void){
 		if (m_Joystick->GetRawButton(3)){
 			shooter1->SetSetpoint(-SIMPLE_SHOOT_SPEED);
 			shooter2->SetSetpoint(SIMPLE_SHOOT_SPEED);
+		}
+		else if (m_Joystick->GetRawButton(5)){
+			shooter1->SetSetpoint(SIMPLE_SHOOT_SPEED/2.f);
+			shooter2->SetSetpoint(-SIMPLE_SHOOT_SPEED/2.f);
 		}
 		else{
 			shooter1->SetSetpoint(0.0);
