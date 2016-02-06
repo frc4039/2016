@@ -18,9 +18,10 @@ private:
 	CANTalon *shooter1, *shooter2;
 	Relay *m_LED;
 
-	VictorSP *m_intake;
+	VictorSP *m_intake, *m_pusher;
 
 	Solenoid *m_shiftHigh, *m_shiftLow;
+	Solenoid *m_shootE, *m_shootR;
 
 	Joystick *m_Joystick;
 	Timer *timer;
@@ -29,6 +30,7 @@ private:
 	//=======================Vision Variables======================
 	IMAQdxSession session;
 	Image *frame;
+	Image *subtracted;
 	Image *processed;
 	Image *particle;
 	ImageInfo raw_info;
@@ -73,6 +75,8 @@ private:
 		//talon = new CANTalon(1);
 		m_shiftHigh = new Solenoid(0);
 		m_shiftLow = new Solenoid(1);
+		m_shootE = new Solenoid(2);
+		m_shootR = new Solenoid(3);
 
 		m_Joystick = new Joystick(0);
 
@@ -80,6 +84,7 @@ private:
 		shooter2 = new CANTalon(1);
 
 		m_intake = new VictorSP(5);
+		m_pusher = new VictorSP(6);
 
 		m_LED = new Relay(0);
 
@@ -181,11 +186,13 @@ private:
 
 		//initialize image data structure (no size)
 		frame = imaqCreateImage(IMAQ_IMAGE_RGB, 0);
+		subtracted = imaqCreateImage(IMAQ_IMAGE_RGB, 0);
 		processed = imaqCreateImage(ImageType::IMAQ_IMAGE_U8,0);
 		particle = imaqCreateImage(ImageType::IMAQ_IMAGE_U8,0);
 
 		//initialize image with a size
 		imaqArrayToImage(frame, &raw_array, RES_X, RES_Y);
+		imaqArrayToImage(subtracted, &raw_array, RES_X, RES_Y);
 		imaqArrayToImage(processed, &proc_array, RES_X, RES_Y);
 		imaqArrayToImage(particle, &proc_array, RES_X, RES_Y);
 
@@ -261,6 +268,8 @@ private:
 		teleDrive();
 		operateShifter();
 		simpleShoot();
+		pusher();
+		SubtractionFilter();
 		//if (m_Joystick->GetRawButton(10))
 			//aimAtTarget();
 		//FindTargetCenter();
@@ -269,10 +278,11 @@ private:
 	}
 
 	//==========================================================USER FUNCTIONS=================================
+#define PRACTICE_DRIVE_LIMIT 0.35
 	inline void teleDrive(void)
 	{
-		leftSpeed = limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 5), 1), 0.75f);
-		rightSpeed = -limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 5), 1), 0.75f);
+		leftSpeed = scale(limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 5), 1), 0.75f), PRACTICE_DRIVE_LIMIT);
+		rightSpeed = scale(-limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 5), 1), 0.75f), PRACTICE_DRIVE_LIMIT);
 
 		//printf("Joystick x=%f, y=%f\n", x,y);
 		m_leftDrive4->SetSpeed(leftSpeed);
@@ -282,7 +292,7 @@ private:
 	}
 
 	inline void operateShifter(void){
-		if(m_Joystick->GetRawButton(1)){
+		if(m_Joystick->GetRawButton(2)){
 			m_shiftHigh->Set(true);
 			m_shiftLow->Set(false);
 		}
@@ -298,15 +308,15 @@ private:
 			shooter2->SetSetpoint(SIMPLE_SHOOT_SPEED);
 		}
 		else if (m_Joystick->GetRawButton(5)){
-			shooter1->SetSetpoint(SIMPLE_SHOOT_SPEED/2.f);
-			shooter2->SetSetpoint(-SIMPLE_SHOOT_SPEED/2.f);
+			shooter1->SetSetpoint(SIMPLE_SHOOT_SPEED);
+			shooter2->SetSetpoint(-SIMPLE_SHOOT_SPEED);
 		}
 		else{
 			shooter1->SetSetpoint(0.0);
 			shooter2->SetSetpoint(0.0);
 		}
 
-#define SPEED 0.5
+#define SPEED 0.50
 		if(m_Joystick->GetRawButton(7)){
 			m_intake->SetSpeed(SPEED);
 		}
@@ -316,8 +326,26 @@ private:
 		else{
 			m_intake->SetSpeed(0.0f);
 		}
+
+		if (m_Joystick->GetRawButton(1)){
+			m_shootE->Set(true);
+			m_shootR->Set(false);
+		}
+		else{
+			m_shootE->Set(false);
+			m_shootR->Set(true);
+		}
 	}
 
+#define PUSHER_SPEED 0.25
+	inline void pusher(void){
+		if (m_Joystick->GetRawButton(6))
+			m_pusher->SetSpeed(PUSHER_SPEED);
+		else if (m_Joystick->GetRawButton(4))
+			m_pusher->SetSpeed(-PUSHER_SPEED);
+		else
+			m_pusher->SetSpeed(0.f);
+	}
 	//===============================================VISION FUNCTIONS=============================================
 #define AIM_P 0.003f
 #define AIM_E 10
@@ -453,6 +481,26 @@ private:
 			else
 				proc_pixel[i] = 0;
 		}
+	}
+
+	inline void SubtractionFilter(void){
+		//take pics with light on and off
+		IMAQdxGrab(session, frame, true, NULL);
+		m_LED->Set(Relay::kOff);
+		IMAQdxGrab(session, subtracted, true, NULL);
+		m_LED->Set(Relay::kForward);
+
+
+		if (m_Joystick->GetRawButton(11))
+			CameraServer::GetInstance()->SetImage(frame);
+		else if (m_Joystick->GetRawButton(10))
+			CameraServer::GetInstance()->SetImage(subtracted);
+		else{
+			imaqSubtract(subtracted, frame, subtracted);
+			imaqDrawShapeOnImage(subtracted, subtracted, {0, IMAGE_CENTER+AIM_CORRECTION, RES_Y-1, 1}, IMAQ_DRAW_INVERT, IMAQ_SHAPE_RECT, 0);
+			CameraServer::GetInstance()->SetImage(subtracted);
+		}
+
 	}
 
 	//=============================================MATHY FUNCTIONS=======================================
