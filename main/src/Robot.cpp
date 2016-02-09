@@ -1,6 +1,6 @@
 #include "WPILib.h"
 #include <math.h>
-#include <AHRS.h>
+//#include <AHRS.h>
 
 #define RES_X 640
 #define RES_Y 480
@@ -9,6 +9,8 @@ class Robot: public IterativeRobot
 {
 private:
 	LiveWindow *lw = LiveWindow::GetInstance();
+
+	int autoState, autoMode, shooterState;
 
 	Victor *m_leftDrive4; //0
 	Victor *m_leftDrive1; //1
@@ -336,6 +338,12 @@ private:
 			m_shootR->Set(true);
 		}
 	}
+
+
+/*	void advancedShoot()
+	{
+		switch(shooterState)
+	}*/
 
 #define PUSHER_SPEED 0.25
 	inline void pusher(void){
