@@ -1,5 +1,6 @@
 #include "WPILib.h"
 #include <math.h>
+#include "Gamepad.h"
 //#include <AHRS.h>
 
 #define RES_X 640
@@ -23,9 +24,12 @@ private:
 	Solenoid *m_shiftHigh, *m_shiftLow;
 	Solenoid *m_shootE, *m_shootR;
 
+	Gamepad *m_Gamepad;
 	Joystick *m_Joystick;
 	Timer *timer;
 	double last_time;
+
+	DigitalInput *m_homeSwitch;
 
 	//=======================Vision Variables======================
 	IMAQdxSession session;
@@ -79,6 +83,7 @@ private:
 		m_shootR = new Solenoid(3);
 
 		m_Joystick = new Joystick(0);
+		m_Gamepad = new Gamepad(1);
 
 		shooter1 = new CANTalon(0);
 		shooter2 = new CANTalon(1);
@@ -87,8 +92,9 @@ private:
 
 		m_LED = new Relay(0);
 
-		VisionInit();
+		m_homeSwitch = new DigitalInput(0);
 
+		VisionInit();
 	}
 
 #define EXPOSURE (Int64)10
@@ -300,15 +306,15 @@ private:
 			m_shiftLow->Set(true);
 		}
 	}
-#define SIMPLE_SHOOT_SPEED 0.8225f
+#define SHOOT_SPEED 0.8225f
 	inline void simpleShoot(void){
 		if (m_Joystick->GetRawButton(3)){
-			shooter1->SetSetpoint(-SIMPLE_SHOOT_SPEED);
-			shooter2->SetSetpoint(SIMPLE_SHOOT_SPEED);
+			shooter1->SetSetpoint(-SHOOT_SPEED);
+			shooter2->SetSetpoint(SHOOT_SPEED);
 		}
 		else if (m_Joystick->GetRawButton(5)){
-			shooter1->SetSetpoint(SIMPLE_SHOOT_SPEED);
-			shooter2->SetSetpoint(-SIMPLE_SHOOT_SPEED);
+			shooter1->SetSetpoint(SHOOT_SPEED);
+			shooter2->SetSetpoint(-SHOOT_SPEED);
 		}
 		else{
 			shooter1->SetSetpoint(0.0);
@@ -337,11 +343,6 @@ private:
 	}
 
 
-/*	void advancedShoot()
-	{
-		switch(shooterState)
-	}*/
-
 #define PUSHER_SPEED 0.25
 	inline void pusher(void){
 		if (m_Joystick->GetRawButton(6))
@@ -350,6 +351,121 @@ private:
 			m_pusher->SetSetpoint(-PUSHER_SPEED);
 		else
 			m_pusher->SetSetpoint(0.f);
+	}
+
+	void advancedShoot(void)
+	{
+		switch(shooterState)
+		{
+		case 0:
+			//everything is off
+			shooter1->SetSetpoint(0.f);
+			shooter2->SetSetpoint(0.f);
+			if(m_homeSwitch->Get())
+				shooterState = 1;
+			else
+				shooterState = 2;
+			break;
+		case 1:
+			//cylinder = extend|angle = home
+			shooter1->SetSetpoint(0.f);
+			shooter2->SetSetpoint(0.f);
+			m_shootE->Set(true);
+			m_shootR->Set(false);
+			if(m_Gamepad->GetLY() == 1)
+				shooterState = 2;
+			break;
+		case 2:
+			//cylinder = extend|angle = pickup
+			shooter1->SetSetpoint(0.f);
+			shooter2->SetSetpoint(0.f);
+			m_shootE->Set(true);
+			m_shootR->Set(false);
+			if(m_Gamepad->GetLY() == -1)
+				shooterState = 1;
+			else if(m_Gamepad->GetLY() == 1)
+				shooterState = 3;
+			break;
+		case 3:
+			//cylinder = extend|angle = pickup|shooter = in
+			shooter1->SetSetpoint(SHOOT_SPEED);
+			shooter2->SetSetpoint(-SHOOT_SPEED);
+			m_shootE->Set(true);
+			m_shootR->Set(false);
+			if(m_Gamepad->GetLY() == -1)
+				shooterState = 1;
+			else if(m_Gamepad->GetLY() == 1)
+				shooterState = 2;
+			else if(m_Gamepad->GetLY() == 1)
+				shooterState = 3;
+			break;
+		case 4:
+			//cylinder = extend|angle = pickup
+			shooter1->SetSetpoint(0.f);
+			shooter2->SetSetpoint(0.f);
+			m_shootE->Set(true);
+			m_shootR->Set(false);
+			if(m_Gamepad->GetLY() == 2)
+				shooterState = 2;
+			else if(m_Gamepad->GetLY(##))
+				shooterState = 3;
+			else if(m_Gamepad->GetLY(##))
+				shooterState = 5;
+			else if(m_Gamepad->GetLY(##))
+				shooterState = 6;
+			break;
+		case 5:
+			m_shootE->Set(true);
+			m_shootR->Set(false);
+			shooter1->SetSetpoint(0.f);
+			shooter2->SetSetpoint(0.f);
+			//cylinder = extend|angle = home
+			if(m_Gamepad->GetLY(##))
+				shooterState = 4;
+			else if(m_Gamepad->GetLY(##))
+				shooterState = 6;
+			break;
+		case 6:
+			m_shootE->Set(true);
+			m_shootR->Set(false);
+			shooter1->SetSetpoint(0.f);
+			shooter2->SetSetpoint(0.f);
+			//cylinder = extend|angle = shoot
+			if(m_Gamespad->GetLY(##))
+				shooterState = 4;
+			else if(m_Gamepad->GetLY(##))
+				shooterState = 5;
+			else if(m_Gamepad->GetLY(##))
+				shooterState = 7;
+			break;
+		case 7:
+			m_shootE->Set(false);
+			m_shootR->Set(true);
+			shooter1->SetSetpoint(0.f);
+			shooter2->SetSetpoint(0.f);
+			//cylinder = retract|shooter = out|angle = shoot
+			if(m_Gamepad->GetLY(##))
+				shooterState = 6;
+			else if(m_Gamepad->GetLY(##))
+				shooterState = 8;
+			else if(m_Gamepad->GetLY(##))
+				shooterState = 9;
+			break;
+		case 8:
+			m_shootE->Set(true);
+			m_shootR->Set(false);
+			//cylinder = extend|shooter = out|angle = shoot
+			if(m_Gamepad->GetLY(##))
+				shooterState = 1;
+			break;
+		case 9:
+			//vision
+			if(m_Gamepad->GetLY(##))
+				shooterState = 7;
+			else if(m_Gamepad->GetLY(##))
+				shooterState = 8;
+			break;
+		}
 	}
 	//===============================================VISION FUNCTIONS=============================================
 #define AIM_P 0.003f
@@ -534,7 +650,6 @@ private:
 			return -lim;
 		return x;
 	}
-
-};
+}
 
 START_ROBOT_CLASS(Robot)

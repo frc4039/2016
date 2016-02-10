@@ -1,78 +1,78 @@
 void advancedShooter(vois){
-  switch(ShooterState){
-  case 0:
-    //everything is off
-    if(m_homeswitch->get())
-      ShooterState = 1;
-    else
-      ShooterState = 2;
-    break:
-  case 1:
-    //cylinder = extend|angle = home
-    if(m_Gamepad->GetY(1))
-      Shooterstate = 2;
-    break;
-  case 2:
-    //cylinder = extend|angle = pickup
-    if(m_Gamepad->GetY(-1))
-      Shooterstate = 1;
-    else if(m_Gamepad->GetY(7))
-      Shooterstate = 3;
-    break;
-  case 3:
-    //cylinder = extend|angle = pickup|shooter = in 
-    if(m_Gamepad->GetY(-1))
-      Shooterstate = 1;
-    else if(m_Gamepad->GetY(-7))
-      Shooterstate = 2;
-    else if(m_Gamepad->GetY(##))
-      Shooterstate = 3;
-    break;
-  case 4:
-    //cylinder = extend|angle = pickup
-    if(m_Gamepad->GetY(##))
-      Shooterstate = 2;
-    else if(m_Gamepad->GetY(##))
-      Shooterstate = 3;
-    else if(m_Gamepad->GetY(##))
-      Shooterstate = 5;
-    else if(m_Gamepad->GetY(##))
-      Shooterstate = 6;
-    break;
-  case 5:
-    //cylinder = extend|angle = home
-    if(m_Gamepad->GetY(##))
-      Shooterstate = 4;
-    else if(m_Gamepad->GetY(##))
-      Shooterstate = 6;
-    break;
-  case 6:
-    //cylinder = extend|angle = shoot
-    if(m_Gamespad->GetY(##))
-      Shooterstate = 4;
-    eles if(m_Gamepad->GetY(##))
-      Shooterstate = 5;
-    else if(m_Gamepad->GetY(##))
-      Shooterstate = 7;
-    break;
-  case 7:
-    //cylinder = retract|shooter = out|angle = shoot
-    if(m_Gamepad->GetY(##))
-      Shooterstate = 6;
-    else if(m_Gamepad->GetY(##))
-      Shooterstate = 8;
-    else if(m_Gamepad->GetY(##))
-      Shooterstate = 9;
-    break;
-  case 8:
-    //cylinder = extend|shooter = out|angle = shoot
-    if(m_Gamepad->GetY(##))
-      Shooterstate = 1;
-    break;
-  case 9:
-    //vision
-    if(m_Gamepad->GetY(##))
-      Shooterstate = 7;
-    else if(m_Gamepad->GetY(##))
-      Shooterstate = 8;
-    break;
+	switch(ShooterState){
+	case 0:
+		//everything is off
+		if(m_homeswitch->get())
+			ShooterState = 1;
+		else
+			ShooterState = 2;
+		break:
+	case 1:
+		//cylinder = extend|angle = home
+		if(m_Gamepad->GetY(1))
+			Shooterstate = 2;
+		break;
+	case 2:
+		//cylinder = extend|angle = pickup
+		if(m_Gamepad->GetY(-1))
+			Shooterstate = 1;
+		else if(m_Gamepad->GetY(7))
+			Shooterstate = 3;
+		break;
+	case 3:
+		//cylinder = extend|angle = pickup|shooter = in 
+		if(m_Gamepad->GetY(-1))
+			Shooterstate = 1;
+		else if(m_Gamepad->GetY(-7))
+			Shooterstate = 2;
+		else if(m_Gamepad->GetY(##))
+			Shooterstate = 3;
+		break;
+	case 4:
+		//cylinder = extend|angle = pickup
+		if(m_Gamepad->GetY(##))
+			Shooterstate = 2;
+		else if(m_Gamepad->GetY(##))
+			Shooterstate = 3;
+		else if(m_Gamepad->GetY(##))
+			Shooterstate = 5;
+		else if(m_Gamepad->GetY(##))
+			Shooterstate = 6;
+		break;
+	case 5:
+		//cylinder = extend|angle = home
+		if(m_Gamepad->GetY(##))
+			Shooterstate = 4;
+		else if(m_Gamepad->GetY(##))
+			Shooterstate = 6;
+		break;
+  	case 6:
+		//cylinder = extend|angle = shoot
+		if(m_Gamespad->GetY(##))
+			Shooterstate = 4;
+		else if(m_Gamepad->GetY(##))
+			Shooterstate = 5;
+		else if(m_Gamepad->GetY(##))
+			Shooterstate = 7;
+		break;
+	case 7:
+		//cylinder = retract|shooter = out|angle = shoot
+		if(m_Gamepad->GetY(##))
+			Shooterstate = 6;
+		else if(m_Gamepad->GetY(##))
+			Shooterstate = 8;
+		else if(m_Gamepad->GetY(##))
+			Shooterstate = 9;
+		break;
+	case 8:
+		//cylinder = extend|shooter = out|angle = shoot
+		if(m_Gamepad->GetY(##))
+			Shooterstate = 1;
+		break;
+	case 9:
+		//vision
+		if(m_Gamepad->GetY(##))
+			Shooterstate = 7;
+		else if(m_Gamepad->GetY(##))
+			Shooterstate = 8;
+		break;
