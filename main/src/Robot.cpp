@@ -17,10 +17,8 @@ private:
 	Victor *m_rightDrive2; //2
 	Victor *m_rightDrive3; //3
 	float leftSpeed, rightSpeed;
-	CANTalon *shooter1, *shooter2;
+	CANTalon *shooter1, *shooter2, *m_intake, *m_pusher;
 	Relay *m_LED;
-
-	VictorSP *m_intake, *m_pusher;
 
 	Solenoid *m_shiftHigh, *m_shiftLow;
 	Solenoid *m_shootE, *m_shootR;
@@ -84,9 +82,8 @@ private:
 
 		shooter1 = new CANTalon(0);
 		shooter2 = new CANTalon(1);
-
-		m_intake = new VictorSP(5);
-		m_pusher = new VictorSP(6);
+		m_intake = new CANTalon(2);
+		m_pusher = new CANTalon(3);
 
 		m_LED = new Relay(0);
 
@@ -320,13 +317,13 @@ private:
 
 #define SPEED 0.50
 		if(m_Joystick->GetRawButton(7)){
-			m_intake->SetSpeed(SPEED);
+			m_intake->SetSetpoint(SPEED);
 		}
 		else if (m_Joystick->GetRawButton(8)){
-			m_intake->SetSpeed(-SPEED);
+			m_intake->SetSetpoint(-SPEED);
 		}
 		else{
-			m_intake->SetSpeed(0.0f);
+			m_intake->SetSetpoint(0.0f);
 		}
 
 		if (m_Joystick->GetRawButton(1)){
@@ -348,11 +345,11 @@ private:
 #define PUSHER_SPEED 0.25
 	inline void pusher(void){
 		if (m_Joystick->GetRawButton(6))
-			m_pusher->SetSpeed(PUSHER_SPEED);
+			m_pusher->SetSetpoint(PUSHER_SPEED);
 		else if (m_Joystick->GetRawButton(4))
-			m_pusher->SetSpeed(-PUSHER_SPEED);
+			m_pusher->SetSetpoint(-PUSHER_SPEED);
 		else
-			m_pusher->SetSpeed(0.f);
+			m_pusher->SetSetpoint(0.f);
 	}
 	//===============================================VISION FUNCTIONS=============================================
 #define AIM_P 0.003f
