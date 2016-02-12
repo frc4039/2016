@@ -4,7 +4,7 @@
 #include "SimPID.h"
 #include "SimLib.h"
 #include "Gamepad.h"
-//#include <AHRS.h>
+#include <AHRS.h>
 
 typedef unsigned long uInt32;
 typedef long long int Int64;
@@ -40,6 +40,9 @@ private:
 	Solenoid *m_shiftHigh, *m_shiftLow;
 	Solenoid *m_shootE, *m_shootR;
 
+	SimPID *drivePID;
+	SimPID *turnPID;
+
 	Joystick *m_Gamepad;
 	Joystick *m_Joystick;
 
@@ -52,6 +55,8 @@ private:
 
 	Encoder *m_leftDriveEncoder;
 	Encoder *m_rightDriveEncoder;
+
+	AHRS *nav;
 
 	//=======================Vision Variables======================
 	IMAQdxSession session;
@@ -112,8 +117,16 @@ private:
 
 		m_LED = new Relay(0);
 
+		drivePID = new SimPID();
+		drivePID->setMinDoneCycles(1);
+		turnPID = new SimPID();
+		turnPID->setMinDoneCycles(1);
+
 		m_intakeHomeSwitch = new DigitalInput(1);
 		m_boulderSwitch = new DigitalInput(0);
+
+		m_leftDriveEncoder = new Encoder(4, 5);
+		m_rightDriveEncoder = new Encoder(2, 3);
 
 		m_intake = new CANTalon(2);
 		m_intake->SetPID(1,0,0.4,1);
@@ -123,6 +136,8 @@ private:
 		m_intake->SelectProfileSlot(0);
 		m_intake->SetControlMode(CANTalon::kPosition);
 		m_intake->SetClosedLoopOutputDirection(true);
+
+		nav = new AHRS(SPI::Port::kMXP);
 
 		m_pusher = new CANTalon(3);
 		/*
@@ -590,6 +605,24 @@ private:
 		}
 	}
 
+	bool autoDrive(int distance, int angle)
+	{
+		int currentDist = (m_rightDriveEncoder->Get() + m_leftDriveEncoder->Get()) / 2;
+		int currentAngle = nav->GetYaw();
+
+		drivePID->setDesiredValue(distance);
+		turnPID->setDesiredValue(angle);
+
+		float drive = drivePID->calcPID(currentDist);
+		float turn = turnPID->calcPID(currentAngle);
+
+		m_rightDrive2->SetSpeed(-(limit(drive - turn, 1)));
+		m_rightDrive3->SetSpeed(-(limit(drive - turn, 1)));
+		m_leftDrive4->SetSpeed(limit(drive + turn, 1));
+		m_leftDrive1->SetSpeed(limit(drive + turn, 1));
+
+		return drivePID->isDone() && turnPID->isDone();
+	}
 
 	//===============================================VISION FUNCTIONS=============================================
 #define AIM_P 0.05f
