@@ -136,6 +136,7 @@ private:
 
 		timer = new Timer();
 		timer->Reset();
+
 		VisionInit();
 	}
 
@@ -327,9 +328,10 @@ private:
 		//SubtractionFilter();
 		//if (m_pusherHomeSwitch->Get())
 			//m_pusher->Reset();
-		//if (m_Joystick->GetRawButton(10))
-			//aimAtTarget();
-		//FindTargetCenter();
+		if (m_Joystick->GetRawButton(10))
+			aimAtTarget();
+		else
+			FindTargetCenter();
 
 		//lw->Run();
 	}
@@ -590,39 +592,62 @@ private:
 
 
 	//===============================================VISION FUNCTIONS=============================================
-#define AIM_P 0.003f
+#define AIM_P 0.05f
 #define AIM_E 10
 #define AIM_LIM 0.5
 #define AIM_CORRECTION 0
-#define AIM_FILTER 0.5
+#define AIM_FILTER 0.2
+#define AIM_LOOP_WAIT 50
+#define AIM_TIMEOUT 100
 
 #define IMAGE_CENTER 320
+	int aim_loop_counter;
+
 	int aimAtTarget(void){
-		int x_pixel = FindTargetCenter();
-		float turn;
-		float error = IMAGE_CENTER + AIM_CORRECTION - x_pixel;
-		if(x_pixel > 0){
-			turn = limit(AIM_P * error, AIM_LIM);
-			turn = AIM_FILTER*(turn - last_turn) + last_turn;
-			last_turn = turn;
+		float turn = 0;
+		float error;
+		int image_error;
 
-			//SmartDashboard::PutNumber("Aim Error", IMAGE_CENTER + AIM_CORRECTION - x_pixel);
-			//SmartDashboard::PutNumber("Motor Output", turn);
+		while (m_Joystick->GetRawButton(10) && IsEnabled()){
+			//take a picture after some time
+			if(aim_loop_counter >= AIM_LOOP_WAIT){
+				image_error = FindTargetCenter();
+				//if the target was found calculate turn speed
+				if (image_error == 0) {
+					error = IMAGE_CENTER + AIM_CORRECTION - centerx;
+					turn = limit(AIM_P * error, AIM_LIM);
+					turn = AIM_FILTER*(turn - last_turn) + last_turn;
+
+					last_turn = turn;
+					aim_loop_counter = 0;
+				}
+
+
+				//SmartDashboard::PutNumber("Aim Error", IMAGE_CENTER + AIM_CORRECTION - x_pixel);
+				//SmartDashboard::PutNumber("Motor Output", turn);
+			}
+
+			//if image hasn't been found in a while then stop moving
+			if (aim_loop_counter - AIM_LOOP_WAIT >= AIM_TIMEOUT){
+				turn = 0;
+			}
+
+			aim_loop_counter++;
+
+			m_leftDrive4->SetSpeed(turn);
+			m_leftDrive1->SetSpeed(turn);
+			m_rightDrive2->SetSpeed(turn);
+			m_rightDrive3->SetSpeed(turn);
+
+			if((error) < AIM_E && (error) > -AIM_E){
+				//printf("SHOOT THE BALL!!!\n");
+				return 1;
+			}
+			//printf("Do not shoot yet.\n");
+			return 0;
 		}
-		else
-			turn = 0;
-
-		m_leftDrive4->SetSpeed(turn);
-		m_leftDrive1->SetSpeed(turn);
-		m_rightDrive2->SetSpeed(turn);
-		m_rightDrive3->SetSpeed(turn);
-
-		if((error) < AIM_E && (error) > -AIM_E){
-			//printf("SHOOT THE BALL!!!\n");
-			return 1;
-		}
-		//printf("Do not shoot yet.\n");
-		return 0;
+		//just exiting, targeting cancelled
+		return -1;
 	}
 
 	int FindTargetCenter(void)
@@ -684,8 +709,7 @@ private:
 				DriverStation::ReportError("writing picture to file\n");
 				imaqWriteBMPFile(processed, filename, 30, &colourTable);
 			}
-
-			return centerx;
+			return 0;
 		}
 		// unable to take picture, return error
 		DriverStation::ReportError("ERROR! Unable to take picture!\n");
