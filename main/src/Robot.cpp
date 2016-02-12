@@ -137,7 +137,7 @@ private:
 		m_intake->SetControlMode(CANTalon::kPosition);
 		m_intake->SetClosedLoopOutputDirection(true);
 
-		nav = new AHRS(SPI::Port::kMXP);
+		//nav = new AHRS(0);
 
 		m_pusher = new CANTalon(3);
 		/*
@@ -275,6 +275,7 @@ private:
 		colourTable = {255,255,255,255};
 		picture_ID = 0;
 		last_turn = 0;
+		aim_loop_counter = 0;
 
 		//the camera name (ex "cam0") can be found through the roborio web interface
 		imaqError = IMAQdxOpenCamera("cam0", IMAQdxCameraControlModeController, &session);
@@ -306,8 +307,8 @@ private:
 	void DisabledPeriodic()
 	{
 		//FindTargetCenter();
-		printf("intake enc position: %d\n", m_intake->GetEncPosition());
-		printf("pusher enc position: %d\n", m_pusher->GetEncPosition());
+		//printf("intake enc position: %d\n", m_intake->GetEncPosition());
+		//printf("pusher enc position: %d\n", m_pusher->GetEncPosition());
 		if(m_Joystick->GetRawButton(10))
 			m_intake->SetPosition(0);
 	}
@@ -335,7 +336,6 @@ private:
 
 	void TeleopPeriodic(void)
 	{
-		teleDrive();
 		operateShifter();
 		//simpleShoot();
 		advancedShoot();
@@ -343,10 +343,13 @@ private:
 		//SubtractionFilter();
 		//if (m_pusherHomeSwitch->Get())
 			//m_pusher->Reset();
-		if (m_Joystick->GetRawButton(10))
-			aimAtTarget();
-		else
+		//if (m_Joystick->GetRawButton(10))
+			//aimAtTarget();
+		if(!m_Gamepad->GetRawButton(GP_A)){
 			FindTargetCenter();
+			teleDrive();
+		}
+
 
 		//lw->Run();
 	}
@@ -377,7 +380,7 @@ private:
 	}
 #define SHOOT_SPEED 0.8225f
 #define PICKUP 1700
-#define SHOOT 500
+#define SHOOT 650
 #define HOME 0
 	inline void simpleShoot(void){
 		if (m_Joystick->GetRawButton(3)){
@@ -437,8 +440,8 @@ private:
 
 	void advancedShoot(void)
 	{
-		printf("Shooter State: %d\n", shooterState);
-		printf("gamepad dY: %d\n", m_Gamepad->GetPOV(0));
+		//printf("Shooter State: %d\n", shooterState);
+		//printf("gamepad dY: %d\n", m_Gamepad->GetPOV(0));
 		switch(shooterState)
 		{
 		case 0:
@@ -490,6 +493,16 @@ private:
 			else if(m_boulderSwitch->Get() == CLOSED)
 				shooterState = 40;
 			break;
+		case 39:
+			//cylinder = extend | angle = pickup | shooter out
+			shooter1->SetSetpoint(-SHOOT_SPEED/2);
+			shooter1->SetSetpoint(SHOOT_SPEED/2);
+			m_intake->Set(PICKUP);
+			m_shootE->Set(true);
+			m_shootR->Set(false);
+			if(m_boulderSwitch->Get() == OPEN)
+				shooterState = 20;
+			break;
 		case 40:
 			//cylinder = extend|angle = pickup
 			shooter1->SetSetpoint(0.f);
@@ -501,6 +514,8 @@ private:
 				shooterState = 20;
 			else if(m_boulderSwitch->Get() == OPEN)
 				shooterState = 30;
+			else if(m_Gamepad->GetRawButton(GP_R))
+				shooterState = 39;
 			else if(m_Gamepad->GetPOV() == GP_DOWN)
 				shooterState = 50;
 			else if(m_Gamepad->GetRawButton(GP_B))
@@ -551,8 +566,8 @@ private:
 		case 69:
 			m_shootE->Set(false);
 			m_shootR->Set(true);
-			shooter1->SetSetpoint(0.f);
-			shooter2->SetSetpoint(0.f);
+			shooter1->SetSetpoint(SHOOT_SPEED/4);
+			shooter2->SetSetpoint(-SHOOT_SPEED/4);
 			m_intake->Set(SHOOT);
 			if(timer->Get() > 0.25)
 			{
@@ -597,10 +612,12 @@ private:
 			break;
 		case 90:
 			//vision
-			if(not m_Gamepad->GetRawButton(GP_A))
+			if(!m_Gamepad->GetRawButton(GP_A))
 				shooterState = 70;
-			/*else if()//goal object detected
-				shooterState = 8;*/
+			if(aimAtTarget() == 1){//goal object detected
+				timer->Start();
+				shooterState = 80;
+			}
 			break;
 		}
 	}
@@ -625,23 +642,23 @@ private:
 	}
 
 	//===============================================VISION FUNCTIONS=============================================
-#define AIM_P 0.05f
+#define AIM_P 0.1f
 #define AIM_E 10
-#define AIM_LIM 0.5
-#define AIM_CORRECTION 0
-#define AIM_FILTER 0.2
+#define AIM_LIM 0.75
+#define AIM_CORRECTION 80
+#define AIM_FILTER 1
 #define AIM_LOOP_WAIT 50
-#define AIM_TIMEOUT 100
+#define AIM_TIMEOUT 25
 
 #define IMAGE_CENTER 320
 	int aim_loop_counter;
 
 	int aimAtTarget(void){
 		float turn = 0;
-		float error;
+		float error = -1000;
 		int image_error;
 
-		while (m_Joystick->GetRawButton(10) && IsEnabled()){
+		while (m_Gamepad->GetRawButton(GP_A)){
 			//take a picture after some time
 			if(aim_loop_counter >= AIM_LOOP_WAIT){
 				image_error = FindTargetCenter();
@@ -654,16 +671,16 @@ private:
 					last_turn = turn;
 					aim_loop_counter = 0;
 				}
-
+				printf("im_error: %d\tcenter: %f\terror: %f\tturn: %f\n", image_error, centerx, error, turn);
 
 				//SmartDashboard::PutNumber("Aim Error", IMAGE_CENTER + AIM_CORRECTION - x_pixel);
 				//SmartDashboard::PutNumber("Motor Output", turn);
 			}
 
 			//if image hasn't been found in a while then stop moving
-			if (aim_loop_counter - AIM_LOOP_WAIT >= AIM_TIMEOUT){
-				turn = 0;
-			}
+			//if (aim_loop_counter - AIM_LOOP_WAIT >= AIM_TIMEOUT){
+				//turn = 0;
+			//}
 
 			aim_loop_counter++;
 
@@ -719,7 +736,7 @@ private:
 				imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_BOUNDING_RECT_WIDTH, &rect_width);
 				imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_CENTER_OF_MASS_Y, &center_mass_y);
 
-				showBlobMeasurements();
+				//showBlobMeasurements();
 
 				//find center based on width
 				centerx = rect_left + (rect_width/2);
@@ -759,18 +776,19 @@ private:
 		printf("width: %d\tleft: %d\tarea: %d\tperimeter: %d\n", (int)width, (int)left, (int)area, (int)perimeter);
 	}
 
-#define R_THRESHOLD 100
-#define G_THRESHOLD 60
-#define B_THRESHOLD 100
+#define R_THRESHOLD 150
+#define G_THRESHOLD 100
+#define B_THRESHOLD 150
 	inline void BinaryFilter(void){
 		for (int i = 0; i < (RES_X*RES_Y); i++){
+			//printf("R, G, B: (%d, %d, %d)\n", R[i*4], G[i*4], B[i*4]);
 			//if it has lots of red
 			if ((R[i*4] > R_THRESHOLD)){
 				proc_pixel[i] = 0;
 			}
 			//blue without green
 			else if (((B[i*4] > B_THRESHOLD) && (G[i*4] < G_THRESHOLD))){
-				printf("eliminating pixel BG: %d, %d\n", B[i*4], G[i*4]);
+				//printf("eliminating pixel BG: %d, %d\n", B[i*4], G[i*4]);
 				proc_pixel[i] = 0;
 			}
 			//if lots of green
