@@ -347,7 +347,7 @@ private:
 			//aimAtTarget();
 		if(!m_Gamepad->GetRawButton(GP_A)){
 			FindTargetCenter();
-			teleDrive();
+		teleDrive();
 		}
 
 
