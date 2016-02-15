@@ -4,7 +4,7 @@
 #include "SimPID.h"
 #include "SimLib.h"
 #include "Gamepad.h"
-#include <AHRS.h>
+//#include <AHRS.h>
 
 typedef unsigned long uInt32;
 typedef long long int Int64;
@@ -17,10 +17,17 @@ typedef long long int Int64;
 #define GP_A 1
 #define GP_B 2
 #define GP_X 3
+#define GP_Y 4
 #define GP_L 5
 #define GP_R 6
 #define OPEN 1
 #define CLOSED 0
+
+#define SHOOT_SPEED 0.8225f
+#define PICKUP 1800
+#define SHOOT 425
+//#define SHOOT 550
+#define HOME 0
 
 class Robot: public IterativeRobot
 {
@@ -43,6 +50,7 @@ private:
 	SimPID *drivePID;
 	SimPID *turnPID;
 	SimPID *visionPID;
+	SimPID *armPID;
 
 	Joystick *m_Gamepad;
 	Joystick *m_Joystick;
@@ -57,7 +65,7 @@ private:
 	Encoder *m_leftDriveEncoder;
 	Encoder *m_rightDriveEncoder;
 
-	AHRS *nav;
+	//AHRS *nav;
 
 	//=======================Vision Variables======================
 	IMAQdxSession session;
@@ -118,14 +126,17 @@ private:
 
 		m_LED = new Relay(0);
 
-		drivePID = new SimPID();
+		drivePID = new SimPID(0 ,0, 0, 0);
 		drivePID->setMinDoneCycles(1);
-		turnPID = new SimPID();
+		turnPID = new SimPID(0, 0, 0, 0);
 		turnPID->setMinDoneCycles(1);
 
-		visionPID = new SimPID(0.01, 0, 0.005, 5);
-		visionPID->setMaxOutput(0.5);
+		visionPID = new SimPID(0.005, 0.02, 0.003, 5);
+		visionPID->setMaxOutput(0.3);
 		visionPID->setMinDoneCycles(5);
+
+		armPID = new SimPID(0.004, 0, 0.001, 10);
+		armPID->setMaxOutput(0.4);
 
 		m_intakeHomeSwitch = new DigitalInput(1);
 		m_boulderSwitch = new DigitalInput(0);
@@ -141,7 +152,8 @@ private:
 		m_intake->SetCloseLoopRampRate(100);
 		m_intake->SelectProfileSlot(0);
 		m_intake->SetControlMode(CANTalon::kPosition);
-		m_intake->SetClosedLoopOutputDirection(true);*/
+		m_intake->SetClosedLoopOutputDirection(true);
+		 */
 
 		//nav = new AHRS(0);
 
@@ -162,6 +174,8 @@ private:
 
 
 		VisionInit();
+
+		shooterState = 0;
 	}
 
 #define EXPOSURE (Int64)10
@@ -324,14 +338,182 @@ private:
 
 	//========================================================AUTONOMOUS=======================================
 	void AutonomousInit(void)
-	{
+		{
+			autoState = 0;
+			//nav->Reset();
+			m_leftDriveEncoder->Reset();
+			m_rightDriveEncoder->Reset();
+			drivePID->setMaxOutput(0.75);
+			turnPID->setMaxOutput(0.75);
+			shooter1->SetSetpoint(0.f);
+			shooter2->SetSetpoint(0.f);
+			timer->Start();
+		}
 
-	}
-
-	void AutonomousPeriodic(void)
-	{
-
-	}
+		void AutonomousPeriodic(void)
+		{
+			/*switch(autoMode)
+			{
+			case 0:
+				m_leftDrive4->SetSpeed(0.f);
+				m_leftDrive1->SetSpeed(0.f);
+				m_rightDrive2->SetSpeed(0.f);
+				m_rightDrive3->SetSpeed(0.f);
+				break;
+			/*case 1: //test auto
+				switch(autoState)
+				{
+				case 0:
+					autoState++;
+					break;
+				case 1:
+					shooter1->SetSetpoint(0.8225);
+					shooter2->SetSetpoint(-0.8225);
+					if(m_boulderSwitch->Get() && autoDrive(1000,0))
+					{
+						shooter1->SetSetpoint(0);
+						shooter2->SetSetpoint(0);
+						autoState++;
+					}
+					break;
+				case 2:
+					if(autoDrive(0, 180))
+						autoState++;
+					break;
+				case 3:
+					if(autoDrive(1000, 180))
+						autoState++;
+					break;
+				case 4:
+					shooter1->SetSetpoint(-0.8225);
+					shooter2->SetSetpoint(0.8225);
+					if(m_boulderSwitch->Get() == OPEN)
+						autoState++;
+					break;
+				}
+			case 1: //drive forward with boulder preloaded and move under low bar
+				switch(autoState)
+				{
+				case 0:
+					m_intake->SetPosition(HOME);
+					autoState++;
+					break;
+				case 1:
+					m_shootE->Set(true);
+					m_shootR->Set(false);
+					autoDrive(5000, 0);
+					break;
+				}
+				break;
+			case 2: //wait 5 secs, drive forward with boulder preloaded and move under low bar
+				switch(autoState)
+				{
+				case 0:
+					m_intake->SetPosition(HOME);
+					if(timer->Get() > 5.0)
+					{
+						timer->Stop();
+						timer->Reset();
+						autoState++;
+					}
+					break;
+				case 1:
+					m_shootE->Set(true);
+					m_shootR->Set(false);
+					autoDrive(5000, 0);
+					break;
+				}
+				break;
+			case 3: //discharge ball to tower
+				switch(autoState)
+				{
+				case 0:
+					m_intake->SetPosition(HOME);
+					autoState++;
+					break;
+				case 1:
+					m_shootE->Set(true);
+					m_shootR->Set(false);
+					if(autoDrive(10000, 0))
+						autoState++;
+					break;
+				case 2:
+					m_shootE->Set(true);
+					m_shootR->Set(false);
+					m_intake->Set(PICKUP);
+					if(autoDrive(10000, 45))
+					{
+						timer->Reset();
+						autoState++;
+					}
+					break;
+				case 3:
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					shooter1->SetSetpoint(SHOOT_SPEED/4);
+					shooter2->SetSetpoint(-SHOOT_SPEED/4);
+					if(timer->Get() > 0.5)
+					{
+						shooter1->SetSetpoint(0.f);
+						shooter2->SetSetpoint(0.f);
+						timer->Reset();
+						autoState++;
+					}
+					break;
+				case 4:
+					shooter1->SetSetpoint(-SHOOT_SPEED);
+					shooter2->SetSetpoint(SHOOT_SPEED);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					if(timer->Get() > 0.5)
+					{
+						timer->Reset();
+						autoState++;
+					}
+					break;
+				case 5:
+					m_shootE->Set(true);
+					m_shootR->Set(false);
+					if(m_boulderSwitch->Get() == OPEN)
+					{
+						shooter1->SetSetpoint(0.f);
+						shooter2->SetSetpoint(0.f);
+						timer->Reset();
+						autoState++;
+					}
+					break;
+				case 6:
+					m_shootE->Set(true);
+					m_shootR->Set(false);
+					autoDrive(0, 0);
+					break;
+				}
+				break;
+			case 10: //from batter, align to high goal and shoot
+				switch(autoState)
+				{
+				case 0:
+					m_intake->SetPosition(HOME);
+					autoState++;
+					break;
+				case 1:
+					m_shootE->Set(true);
+					m_shootR->Set(false);
+					if (autoDrive(2000, 0))
+						autoState++;
+					break;
+				case 2:
+					m_shootE->Set(true);
+					m_shootR->Set(false);
+					m_intake->SetPosition(SHOOT);
+					autoState++;
+					break;
+				case 3:
+					m_shootE->Set(false);
+				}
+				break;
+			}*/
+		}
 
 	//===========================================================TELEOP=======================================
 	void TeleopInit(void)
@@ -398,10 +580,7 @@ private:
 			m_shiftLow->Set(true);
 		}
 	}
-#define SHOOT_SPEED 0.8225f
-#define PICKUP 1700
-#define SHOOT 650
-#define HOME 0
+
 	inline void simpleShoot(void){
 		if (m_Joystick->GetRawButton(3)){
 			shooter1->SetSetpoint(-SHOOT_SPEED);
@@ -470,7 +649,7 @@ private:
 			shooter2->SetSetpoint(0.f);
 			m_shootE->Set(true);
 			m_shootR->Set(false);
-			if(m_intakeHomeSwitch->Get())
+			if(!m_intakeHomeSwitch->Get())
 				shooterState = 10;
 			else
 				shooterState = 20;
@@ -479,7 +658,7 @@ private:
 			//cylinder = extend|angle = home
 			shooter1->SetSetpoint(0.f);
 			shooter2->SetSetpoint(0.f);
-			m_intake->Set(HOME);
+			autoArm(HOME);
 			m_shootE->Set(true);
 			m_shootR->Set(false);
 			if(m_Gamepad->GetPOV() == GP_UP)
@@ -491,7 +670,7 @@ private:
 			//cylinder = extend|angle = pickup
 			shooter1->SetSetpoint(0.f);
 			shooter2->SetSetpoint(0.f);
-			m_intake->Set(PICKUP);
+			autoArm(PICKUP);
 			m_shootE->Set(true);
 			m_shootR->Set(false);
 			if(m_Gamepad->GetPOV() == GP_DOWN)
@@ -503,7 +682,7 @@ private:
 			//cylinder = extend|angle = pickup|shooter = in
 			shooter1->SetSetpoint(SHOOT_SPEED/2);
 			shooter2->SetSetpoint(-SHOOT_SPEED/2);
-			m_intake->Set(PICKUP);
+			autoArm(PICKUP);
 			m_shootE->Set(true);
 			m_shootR->Set(false);
 			if(m_Gamepad->GetPOV() == GP_DOWN)
@@ -527,7 +706,7 @@ private:
 			//cylinder = extend|angle = pickup
 			shooter1->SetSetpoint(0.f);
 			shooter2->SetSetpoint(0.f);
-			m_intake->Set(PICKUP);
+			autoArm(PICKUP);
 			m_shootE->Set(true);
 			m_shootR->Set(false);
 			if(m_Gamepad->GetRawButton(GP_L))
@@ -544,7 +723,7 @@ private:
 		case 50:
 			m_shootE->Set(true);
 			m_shootR->Set(false);
-			m_intake->Set(HOME);
+			autoArm(HOME);
 			shooter1->SetSetpoint(0.f);
 			shooter2->SetSetpoint(0.f);
 			//cylinder = extend|angle = home
@@ -556,7 +735,7 @@ private:
 		case 60:
 			m_shootE->Set(true);
 			m_shootR->Set(false);
-			m_intake->Set(SHOOT);
+			autoArm(SHOOT);
 			shooter1->SetSetpoint(0.f);
 			shooter2->SetSetpoint(0.f);
 			//cylinder = extend|angle = shoot
@@ -575,7 +754,7 @@ private:
 			m_shootR->Set(true);
 			shooter1->SetSetpoint(SHOOT_SPEED/4);
 			shooter2->SetSetpoint(-SHOOT_SPEED/4);
-			m_intake->Set(SHOOT);
+			autoArm(SHOOT);
 			if(timer->Get() > 0.25)
 			{
 				shooterState = 70;
@@ -588,7 +767,7 @@ private:
 			m_shootR->Set(true);
 			shooter1->SetSetpoint(SHOOT_SPEED/4);
 			shooter2->SetSetpoint(-SHOOT_SPEED/4);
-			m_intake->Set(SHOOT);
+			autoArm(SHOOT);
 			if(timer->Get() > 0.25)
 			{
 				shooterState = 60;
@@ -599,7 +778,7 @@ private:
 		case 70:
 			m_shootE->Set(false);
 			m_shootR->Set(true);
-			m_intake->Set(SHOOT);
+			autoArm(SHOOT);
 			shooter1->SetSetpoint(-SHOOT_SPEED);
 			shooter2->SetSetpoint(SHOOT_SPEED);
 			//cylinder = retract|shooter = out|angle = shoot
@@ -619,7 +798,7 @@ private:
 		case 80:
 			shooter1->SetSetpoint(-SHOOT_SPEED);
 			shooter2->SetSetpoint(SHOOT_SPEED);
-			m_intake->Set(SHOOT);
+			autoArm(SHOOT);
 			m_shootE->Set(true);
 			m_shootR->Set(false);
 			//cylinder = extend|shooter = out|angle = shoot
@@ -632,6 +811,7 @@ private:
 			break;
 		case 90:
 			//vision
+			autoArm(SHOOT);
 			if(!m_Gamepad->GetRawButton(GP_A))
 				shooterState = 70;
 			if(aimAtTarget() == 1){//goal object detected
@@ -642,7 +822,22 @@ private:
 		}
 	}
 
-	bool autoDrive(int distance, int angle)
+	bool autoArm(int ticks)
+		{
+			int currentTicks = m_intake->GetPosition();
+
+			armPID->setDesiredValue(ticks);
+
+			float rotate = armPID->calcPID(currentTicks);
+
+			m_intake->Set(-rotate);
+
+			//printf("rotate power: %f \t error: %d \t target: %d \n", rotate, currentTicks - ticks, ticks);
+
+			return armPID->isDone();
+		}
+
+	/*bool autoDrive(int distance, int angle)
 	{
 		int currentDist = (m_rightDriveEncoder->Get() + m_leftDriveEncoder->Get()) / 2;
 		int currentAngle = nav->GetYaw();
@@ -659,31 +854,32 @@ private:
 		m_leftDrive1->SetSpeed(limit(drive + turn, 1));
 
 		return drivePID->isDone() && turnPID->isDone();
-	}
+	}*/
 
 	//===============================================VISION FUNCTIONS=============================================
 #define AIM_CORRECTION 80
 #define AIM_FILTER 1
-#define AIM_LOOP_WAIT 25
-#define AIM_TIMEOUT 10
+#define AIM_LOOP_WAIT 5
+#define AIM_TIMEOUT 2
+#define AIM_FINE_LIMIT 20
 
 #define IMAGE_CENTER 320
 	int aim_loop_counter;
 
 	int aimAtTarget(void){
 		float turn = last_turn;
-		float error = -1000;
 		int image_error;
+		float error, humanAdjust;
 
 		//take a picture after some time
 		if(aim_loop_counter >= AIM_LOOP_WAIT){
 			image_error = FindTargetCenter();
 			//if the target was found calculate turn speed
 			if (image_error == 0) {
-				turnPID->setDesiredValue(IMAGE_CENTER - AIM_CORRECTION);
-				turn = turnPID->calcPID(centerx);
+				visionPID->setDesiredValue(IMAGE_CENTER + AIM_CORRECTION);
+				turn = visionPID->calcPID(centerx);
 				turn = AIM_FILTER*(turn - last_turn) + last_turn;
-
+				error = IMAGE_CENTER + AIM_CORRECTION - centerx;
 				last_turn = turn;
 				aim_loop_counter = 0;
 			}
@@ -700,12 +896,22 @@ private:
 
 		aim_loop_counter++;
 
-		m_leftDrive4->SetSpeed(turn);
-		m_leftDrive1->SetSpeed(turn);
+		humanAdjust = scale(m_Gamepad->GetRawAxis(0), 0.3);
+		turn -= humanAdjust;
+
+
+		if(error < AIM_FINE_LIMIT && error > -AIM_FINE_LIMIT){
+			m_leftDrive4->SetSpeed(turn/2);
+			m_leftDrive1->SetSpeed(turn/2);
+		}
+		else{
+			m_leftDrive4->SetSpeed(turn);
+			m_leftDrive1->SetSpeed(turn);
+		}
 		m_rightDrive2->SetSpeed(turn);
 		m_rightDrive3->SetSpeed(turn);
 
-		if(visionPID->isDone()){
+		if(visionPID->isDone() && image_error == 0){
 			//printf("SHOOT THE BALL!!!\n");
 			return 1;
 		}
