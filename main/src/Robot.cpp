@@ -42,6 +42,7 @@ private:
 
 	SimPID *drivePID;
 	SimPID *turnPID;
+	SimPID *visionPID;
 
 	Joystick *m_Gamepad;
 	Joystick *m_Joystick;
@@ -122,6 +123,10 @@ private:
 		turnPID = new SimPID();
 		turnPID->setMinDoneCycles(1);
 
+		visionPID = new SimPID(0.01, 0, 0.005, 5);
+		visionPID->setMaxOutput(0.5);
+		visionPID->setMinDoneCycles(5);
+
 		m_intakeHomeSwitch = new DigitalInput(1);
 		m_boulderSwitch = new DigitalInput(0);
 
@@ -129,13 +134,14 @@ private:
 		m_rightDriveEncoder = new Encoder(2, 3);
 
 		m_intake = new CANTalon(2);
+		/*
 		m_intake->SetPID(1,0,0.4,1);
 		m_intake->SetFeedbackDevice(CANTalon::QuadEncoder);
 		m_intake->SetIzone(100);
 		m_intake->SetCloseLoopRampRate(100);
 		m_intake->SelectProfileSlot(0);
 		m_intake->SetControlMode(CANTalon::kPosition);
-		m_intake->SetClosedLoopOutputDirection(true);
+		m_intake->SetClosedLoopOutputDirection(true);*/
 
 		//nav = new AHRS(0);
 
@@ -151,6 +157,9 @@ private:
 
 		timer = new Timer();
 		timer->Reset();
+
+		shooterState = 0;
+
 
 		VisionInit();
 	}
@@ -331,7 +340,6 @@ private:
 		if(m_Joystick->GetRawButton(9))
 			m_intake->SetPosition(0);
 		m_LED->Set(Relay::kForward);
-		shooterState = 0;
 	}
 
 	void TeleopPeriodic(void)
@@ -347,14 +355,26 @@ private:
 			//aimAtTarget();
 		if(!m_Gamepad->GetRawButton(GP_A)){
 			FindTargetCenter();
-		teleDrive();
+			teleDrive();
 		}
+		//tempIntake();
 
 
 		//lw->Run();
 	}
 
 	//==========================================================USER FUNCTIONS=================================
+	inline void tempIntake(void){
+		if(m_Gamepad->GetRawButton(GP_A)){
+			shooter1->SetSetpoint(0.82/2);
+			shooter2->SetSetpoint(-0.82/2);
+		}
+		else{
+			shooter1->SetSetpoint(0.f);
+			shooter2->SetSetpoint(0.f);
+		}
+	}
+
 #define PRACTICE_DRIVE_LIMIT 0.65
 	inline void teleDrive(void)
 	{
@@ -642,62 +662,55 @@ private:
 	}
 
 	//===============================================VISION FUNCTIONS=============================================
-#define AIM_P 0.1f
-#define AIM_E 10
-#define AIM_LIM 0.75
 #define AIM_CORRECTION 80
 #define AIM_FILTER 1
-#define AIM_LOOP_WAIT 50
-#define AIM_TIMEOUT 25
+#define AIM_LOOP_WAIT 25
+#define AIM_TIMEOUT 10
 
 #define IMAGE_CENTER 320
 	int aim_loop_counter;
 
 	int aimAtTarget(void){
-		float turn = 0;
+		float turn = last_turn;
 		float error = -1000;
 		int image_error;
 
-		while (m_Gamepad->GetRawButton(GP_A)){
-			//take a picture after some time
-			if(aim_loop_counter >= AIM_LOOP_WAIT){
-				image_error = FindTargetCenter();
-				//if the target was found calculate turn speed
-				if (image_error == 0) {
-					error = IMAGE_CENTER + AIM_CORRECTION - centerx;
-					turn = limit(AIM_P * error, AIM_LIM);
-					turn = AIM_FILTER*(turn - last_turn) + last_turn;
+		//take a picture after some time
+		if(aim_loop_counter >= AIM_LOOP_WAIT){
+			image_error = FindTargetCenter();
+			//if the target was found calculate turn speed
+			if (image_error == 0) {
+				turnPID->setDesiredValue(IMAGE_CENTER - AIM_CORRECTION);
+				turn = turnPID->calcPID(centerx);
+				turn = AIM_FILTER*(turn - last_turn) + last_turn;
 
-					last_turn = turn;
-					aim_loop_counter = 0;
-				}
-				printf("im_error: %d\tcenter: %f\terror: %f\tturn: %f\n", image_error, centerx, error, turn);
-
-				//SmartDashboard::PutNumber("Aim Error", IMAGE_CENTER + AIM_CORRECTION - x_pixel);
-				//SmartDashboard::PutNumber("Motor Output", turn);
+				last_turn = turn;
+				aim_loop_counter = 0;
 			}
+			printf("im_error: %d\tcenter: %f\terror: %f\tturn: %f\n", image_error, centerx, error, turn);
 
-			//if image hasn't been found in a while then stop moving
-			//if (aim_loop_counter - AIM_LOOP_WAIT >= AIM_TIMEOUT){
-				//turn = 0;
-			//}
-
-			aim_loop_counter++;
-
-			m_leftDrive4->SetSpeed(turn);
-			m_leftDrive1->SetSpeed(turn);
-			m_rightDrive2->SetSpeed(turn);
-			m_rightDrive3->SetSpeed(turn);
-
-			if((error) < AIM_E && (error) > -AIM_E){
-				//printf("SHOOT THE BALL!!!\n");
-				return 1;
-			}
-			//printf("Do not shoot yet.\n");
-			return 0;
+			//SmartDashboard::PutNumber("Aim Error", IMAGE_CENTER + AIM_CORRECTION - x_pixel);
+			//SmartDashboard::PutNumber("Motor Output", turn);
 		}
-		//just exiting, targeting cancelled
-		return -1;
+
+		//if image hasn't been found in a while then stop moving
+		if (aim_loop_counter - AIM_LOOP_WAIT >= AIM_TIMEOUT){
+			turn = last_turn = 0;
+		}
+
+		aim_loop_counter++;
+
+		m_leftDrive4->SetSpeed(turn);
+		m_leftDrive1->SetSpeed(turn);
+		m_rightDrive2->SetSpeed(turn);
+		m_rightDrive3->SetSpeed(turn);
+
+		if(visionPID->isDone()){
+			//printf("SHOOT THE BALL!!!\n");
+			return 1;
+		}
+		//printf("Do not shoot yet.\n");
+		return 0;
 	}
 
 	int FindTargetCenter(void)
