@@ -362,8 +362,8 @@ private:
 			m_rightDriveEncoder->Reset();
 			drivePID->setMaxOutput(0.75);
 			turnPID->setMaxOutput(0.75);
-			shooter1->SetSetpoint(0.f);
-			shooter2->SetSetpoint(0.f);
+			shooter1->Set(0.f);
+			shooter2->Set(0.f);
 			timer->Start();
 		}
 
@@ -612,8 +612,9 @@ private:
 			shooter2->SetSetpoint(0.0);
 		}
 
-#define SPEED 0.50
 #define SPEED_RPM 2000
+#define SHOOTER_SPEED_CHECK 1000
+
 		printf("intake: %d error: %d\n", m_intake->GetEncPosition(), m_intake->GetClosedLoopError());
 		if(m_Joystick->GetRawButton(10))
 			m_intake->SetPosition(0);
@@ -663,8 +664,8 @@ private:
 		{
 		case 0:
 			//everything is off
-			shooter1->SetSetpoint(0.f);
-			shooter2->SetSetpoint(0.f);
+			shooter1->Set(0.f);
+			shooter2->Set(0.f);
 			m_shootE->Set(true);
 			m_shootR->Set(false);
 			if(!m_intakeHomeSwitch->Get())
@@ -674,20 +675,31 @@ private:
 			break;
 		case 10:
 			//cylinder = extend|angle = home
-			shooter1->SetSetpoint(0.f);
-			shooter2->SetSetpoint(0.f);
+			shooter1->Set(0.f);
+			shooter2->Set(0.f);
 			autoArm(HOME);
 			m_shootE->Set(true);
 			m_shootR->Set(false);
 			if(m_Gamepad->GetPOV() == GP_UP)
 				shooterState = 20;
-			if(m_Gamepad->GetRawButton(GP_B))
+			else if(m_Gamepad->GetRawButton(GP_B))
 				shooterState = 60;
+			else if(m_Gamepad->GetRawButton(GP_Y))
+				shooterState = 11;
+			break;
+		case 11:
+			shooter1->Set(0.f);
+			shooter2->Set(0.f);
+			autoArm(HOME);
+			m_shootE->Set(false);
+			m_shootR->Set(true);
+			if(!m_Gamepad->GetRawButton(GP_Y))
+				shooterState = 10;
 			break;
 		case 20:
 			//cylinder = extend|angle = pickup
-			shooter1->SetSetpoint(0.f);
-			shooter2->SetSetpoint(0.f);
+			shooter1->Set(0.f);
+			shooter2->Set(0.f);
 			autoArm(PICKUP);
 			m_shootE->Set(true);
 			m_shootR->Set(false);
@@ -698,8 +710,8 @@ private:
 			break;
 		case 30:
 			//cylinder = extend|angle = pickup|shooter = in
-			shooter1->SetSetpoint(SHOOT_SPEED/2);
-			shooter2->SetSetpoint(-SHOOT_SPEED/2);
+			shooter1->Set(-SPEED_RPM/2.f);
+			shooter2->Set(-SPEED_RPM/2.f);
 			autoArm(PICKUP);
 			m_shootE->Set(true);
 			m_shootR->Set(false);
@@ -712,8 +724,8 @@ private:
 			break;
 		case 39:
 			//cylinder = extend | angle = pickup | shooter out
-			shooter1->SetSetpoint(-SHOOT_SPEED/2);
-			shooter1->SetSetpoint(SHOOT_SPEED/2);
+			shooter1->Set(SPEED_RPM/2.f);
+			shooter2->Set(SPEED_RPM/2.f);
 			m_intake->Set(PICKUP);
 			m_shootE->Set(true);
 			m_shootR->Set(false);
@@ -722,8 +734,8 @@ private:
 			break;
 		case 40:
 			//cylinder = extend|angle = pickup
-			shooter1->SetSetpoint(0.f);
-			shooter2->SetSetpoint(0.f);
+			shooter1->Set(0.f);
+			shooter2->Set(0.f);
 			autoArm(PICKUP);
 			m_shootE->Set(true);
 			m_shootR->Set(false);
@@ -742,8 +754,8 @@ private:
 			m_shootE->Set(true);
 			m_shootR->Set(false);
 			autoArm(HOME);
-			shooter1->SetSetpoint(0.f);
-			shooter2->SetSetpoint(0.f);
+			shooter1->Set(0.f);
+			shooter2->Set(0.f);
 			//cylinder = extend|angle = home
 			if(m_Gamepad->GetPOV() == GP_UP)
 				shooterState = 40;
@@ -754,8 +766,8 @@ private:
 			m_shootE->Set(true);
 			m_shootR->Set(false);
 			autoArm(SHOOT_FAR);
-			shooter1->SetSetpoint(0.f);
-			shooter2->SetSetpoint(0.f);
+			shooter1->Set(0.f);
+			shooter2->Set(0.f);
 			//cylinder = extend|angle = shoot
 			if(m_Gamepad->GetPOV() == GP_UP)
 				shooterState = 40;
@@ -770,8 +782,8 @@ private:
 		case 61:
 			m_shootE->Set(false);
 			m_shootR->Set(true);
-			shooter1->SetSetpoint(SHOOT_SPEED/4);
-			shooter2->SetSetpoint(-SHOOT_SPEED/4);
+			shooter1->Set(-SPEED_RPM/4.f);
+			shooter2->Set(-SPEED_RPM/4.f);
 			autoArm(SHOOT_FAR);
 			if(timer->Get() > 0.25)
 			{
@@ -783,8 +795,8 @@ private:
 		case 69:
 			m_shootE->Set(false);
 			m_shootR->Set(true);
-			shooter1->SetSetpoint(SHOOT_SPEED/4);
-			shooter2->SetSetpoint(-SHOOT_SPEED/4);
+			shooter1->Set(-SPEED_RPM/4.f);
+			shooter2->Set(-SPEED_RPM/4.f);
 			autoArm(SHOOT_FAR);
 			if(timer->Get() > 0.25)
 			{
@@ -808,7 +820,7 @@ private:
 				timer->Start();
 				shooterState = 69;
 			}
-			else if(m_Gamepad->GetRawButton(GP_X))
+			else if(m_Gamepad->GetRawButton(GP_X) && (shooter1->GetEncVel() > SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK) )
 			{
 				timer->Start();
 				shooterState = 80;
@@ -837,7 +849,7 @@ private:
 
 			if(!m_Gamepad->GetRawButton(GP_A))
 				shooterState = 70;
-			if(aimAtTarget() == 1){//goal object detected
+			if(aimAtTarget() == 1 && (shooter1->GetEncVel() > SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK)){//goal object detected
 				timer->Start();
 				shooterState = 80;
 			}
