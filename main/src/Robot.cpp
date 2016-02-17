@@ -2,9 +2,7 @@
 #include "NIIMAQdx.h"
 #include <math.h>
 #include "SimPID.h"
-#include "SimLib.h"
-#include "Gamepad.h"
-//#include <AHRS.h>
+#include "AHRS.h"
 
 typedef unsigned long uInt32;
 typedef long long int Int64;
@@ -25,8 +23,8 @@ typedef long long int Int64;
 
 #define SHOOT_SPEED 0.8225f
 #define PICKUP 1800
-#define SHOOT 425
-//#define SHOOT 550
+#define SHOOT_FAR 425
+#define SHOOT_CLOSE 550
 #define HOME 0
 
 class Robot: public IterativeRobot
@@ -65,7 +63,7 @@ private:
 	Encoder *m_leftDriveEncoder;
 	Encoder *m_rightDriveEncoder;
 
-	//AHRS *nav;
+	AHRS *nav;
 
 	//=======================Vision Variables======================
 	IMAQdxSession session;
@@ -122,7 +120,24 @@ private:
 		m_Gamepad = new Joystick(1);
 
 		shooter1 = new CANTalon(0);
+		shooter1->SetFeedbackDevice(CANTalon::CtreMagEncoder_Relative);
+		shooter1->SetControlMode(CANTalon::kSpeed);
+		shooter1->SetCloseLoopRampRate(0);
+		shooter1->ConfigEncoderCodesPerRev(4096);
+		shooter1->SetPID(0.1, 0, 0.01, 0);
+		shooter1->SelectProfileSlot(0);
+		shooter1->SetClosedLoopOutputDirection(true);
+		shooter1->SetSensorDirection(true);
+		shooter1->SetAllowableClosedLoopErr(1000);
+
 		shooter2 = new CANTalon(1);
+		shooter2->SetFeedbackDevice(CANTalon::CtreMagEncoder_Relative);
+		shooter2->SetControlMode(CANTalon::kSpeed);
+		shooter2->SetCloseLoopRampRate(0);
+		shooter2->ConfigEncoderCodesPerRev(4096);
+		shooter2->SetPID(0.1, 0, 0.01, 0);
+		shooter2->SelectProfileSlot(0);
+		shooter2->SetAllowableClosedLoopErr(1000);
 
 		m_LED = new Relay(0);
 
@@ -131,9 +146,9 @@ private:
 		turnPID = new SimPID(0, 0, 0, 0);
 		turnPID->setMinDoneCycles(1);
 
-		visionPID = new SimPID(0.005, 0.02, 0.003, 5);
+		visionPID = new SimPID(0.006, 0.02, 0.002, 5);
 		visionPID->setMaxOutput(0.3);
-		visionPID->setMinDoneCycles(5);
+		visionPID->setMinDoneCycles(10);
 
 		armPID = new SimPID(0.004, 0, 0.001, 10);
 		armPID->setMaxOutput(0.4);
@@ -155,7 +170,7 @@ private:
 		m_intake->SetClosedLoopOutputDirection(true);
 		 */
 
-		//nav = new AHRS(0);
+		//nav = new AHRS(SPI::Port::kMXP);
 
 		m_pusher = new CANTalon(3);
 		/*
@@ -330,10 +345,12 @@ private:
 	void DisabledPeriodic()
 	{
 		//FindTargetCenter();
-		//printf("intake enc position: %d\n", m_intake->GetEncPosition());
-		//printf("pusher enc position: %d\n", m_pusher->GetEncPosition());
-		if(m_Joystick->GetRawButton(10))
+		//printf("shooter Speed: %f\t%f\n", shooter1->GetSpeed(), shooter2->GetSpeed());
+		if(m_Joystick->GetRawButton(10)){
 			m_intake->SetPosition(0);
+			shooter1->SetPosition(0);
+			shooter2->SetPosition(0);
+		}
 	}
 
 	//========================================================AUTONOMOUS=======================================
@@ -360,7 +377,7 @@ private:
 				m_rightDrive2->SetSpeed(0.f);
 				m_rightDrive3->SetSpeed(0.f);
 				break;
-			/*case 1: //test auto
+			case 1: //test auto
 				switch(autoState)
 				{
 				case 0:
@@ -535,7 +552,7 @@ private:
 			//m_pusher->Reset();
 		//if (m_Joystick->GetRawButton(10))
 			//aimAtTarget();
-		if(!m_Gamepad->GetRawButton(GP_A)){
+		if(shooterState != 90){
 			FindTargetCenter();
 			teleDrive();
 		}
@@ -596,6 +613,7 @@ private:
 		}
 
 #define SPEED 0.50
+#define SPEED_RPM 2000
 		printf("intake: %d error: %d\n", m_intake->GetEncPosition(), m_intake->GetClosedLoopError());
 		if(m_Joystick->GetRawButton(10))
 			m_intake->SetPosition(0);
@@ -607,7 +625,7 @@ private:
 			m_intake->Set(0);
 		}
 		else if(m_Joystick->GetRawButton(9))
-			m_intake->Set(SHOOT);
+			m_intake->Set(SHOOT_FAR);
 		/*
 		else{
 			m_intake->SetSetpoint(0.0f);
@@ -735,7 +753,7 @@ private:
 		case 60:
 			m_shootE->Set(true);
 			m_shootR->Set(false);
-			autoArm(SHOOT);
+			autoArm(SHOOT_FAR);
 			shooter1->SetSetpoint(0.f);
 			shooter2->SetSetpoint(0.f);
 			//cylinder = extend|angle = shoot
@@ -754,7 +772,7 @@ private:
 			m_shootR->Set(true);
 			shooter1->SetSetpoint(SHOOT_SPEED/4);
 			shooter2->SetSetpoint(-SHOOT_SPEED/4);
-			autoArm(SHOOT);
+			autoArm(SHOOT_FAR);
 			if(timer->Get() > 0.25)
 			{
 				shooterState = 70;
@@ -767,7 +785,7 @@ private:
 			m_shootR->Set(true);
 			shooter1->SetSetpoint(SHOOT_SPEED/4);
 			shooter2->SetSetpoint(-SHOOT_SPEED/4);
-			autoArm(SHOOT);
+			autoArm(SHOOT_FAR);
 			if(timer->Get() > 0.25)
 			{
 				shooterState = 60;
@@ -778,9 +796,12 @@ private:
 		case 70:
 			m_shootE->Set(false);
 			m_shootR->Set(true);
-			autoArm(SHOOT);
-			shooter1->SetSetpoint(-SHOOT_SPEED);
-			shooter2->SetSetpoint(SHOOT_SPEED);
+			autoArm(SHOOT_FAR);
+			//shooter1->SetSetpoint(-SHOOT_SPEED);
+			//shooter2->SetSetpoint(SHOOT_SPEED);
+			shooter1->Set(SPEED_RPM);
+			shooter2->Set(SPEED_RPM);
+			printf("shooter Speed: %d\t%d\terror: %d\t%d\n", shooter1->GetEncVel(), shooter2->GetEncVel(), shooter1->GetClosedLoopError(), shooter2->GetClosedLoopError());
 			//cylinder = retract|shooter = out|angle = shoot
 			if(m_Gamepad->GetRawButton(GP_B))
 			{
@@ -796,9 +817,11 @@ private:
 				shooterState = 90;
 			break;
 		case 80:
-			shooter1->SetSetpoint(-SHOOT_SPEED);
-			shooter2->SetSetpoint(SHOOT_SPEED);
-			autoArm(SHOOT);
+			// shooter1->SetSetpoint(-SHOOT_SPEED);
+			// shooter2->SetSetpoint(SHOOT_SPEED);
+			shooter1->Set(SPEED_RPM);
+			shooter2->Set(SPEED_RPM);
+			autoArm(SHOOT_FAR);
 			m_shootE->Set(true);
 			m_shootR->Set(false);
 			//cylinder = extend|shooter = out|angle = shoot
@@ -811,7 +834,7 @@ private:
 			break;
 		case 90:
 			//vision
-			autoArm(SHOOT);
+
 			if(!m_Gamepad->GetRawButton(GP_A))
 				shooterState = 70;
 			if(aimAtTarget() == 1){//goal object detected
@@ -857,11 +880,12 @@ private:
 	}*/
 
 	//===============================================VISION FUNCTIONS=============================================
-#define AIM_CORRECTION 80
+#define AIM_CORRECTION 70
 #define AIM_FILTER 1
 #define AIM_LOOP_WAIT 5
 #define AIM_TIMEOUT 2
 #define AIM_FINE_LIMIT 20
+#define CLOSE_LIMIT 220
 
 #define IMAGE_CENTER 320
 	int aim_loop_counter;
@@ -889,6 +913,11 @@ private:
 			//SmartDashboard::PutNumber("Motor Output", turn);
 		}
 
+		if (center_mass_y < CLOSE_LIMIT)
+			autoArm(SHOOT_CLOSE);
+		else
+			autoArm(SHOOT_FAR);
+
 		//if image hasn't been found in a while then stop moving
 		if (aim_loop_counter - AIM_LOOP_WAIT >= AIM_TIMEOUT){
 			turn = last_turn = 0;
@@ -901,15 +930,18 @@ private:
 
 
 		if(error < AIM_FINE_LIMIT && error > -AIM_FINE_LIMIT){
-			m_leftDrive4->SetSpeed(turn/2);
-			m_leftDrive1->SetSpeed(turn/2);
+			m_leftDrive4->SetSpeed(turn/2.f);
+			m_leftDrive1->SetSpeed(turn/2.f);
+			m_rightDrive2->SetSpeed(turn*1.25f);
+			m_rightDrive3->SetSpeed(turn*1.25f);
 		}
 		else{
 			m_leftDrive4->SetSpeed(turn);
 			m_leftDrive1->SetSpeed(turn);
+			m_rightDrive2->SetSpeed(turn);
+			m_rightDrive3->SetSpeed(turn);
 		}
-		m_rightDrive2->SetSpeed(turn);
-		m_rightDrive3->SetSpeed(turn);
+
 
 		if(visionPID->isDone() && image_error == 0){
 			//printf("SHOOT THE BALL!!!\n");
