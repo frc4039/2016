@@ -26,13 +26,15 @@ typedef long long int Int64;
 #define SHOOT_FAR 425
 #define SHOOT_CLOSE 550
 #define HOME 0
+#define SPEED_RPM 1500
+#define SHOOTER_SPEED_CHECK 20000
 
 class Robot: public IterativeRobot
 {
 private:
 	LiveWindow *lw = LiveWindow::GetInstance();
 
-	int autoState, autoMode, shooterState;
+	int autoState, autoMode, autoPosition, shooterState;
 
 	Victor *m_leftDrive4; //0
 	Victor *m_leftDrive1; //1
@@ -188,12 +190,12 @@ private:
 		timer = new Timer();
 		timer->Reset();
 
-		shooterState = 0;
-
-
 		VisionInit();
 
 		shooterState = 0;
+		autoState = 0;
+		autoMode = 0;
+		autoPosition = 0;
 	}
 
 #define EXPOSURE (Int64)10
@@ -354,11 +356,14 @@ private:
 		{
 			if(m_Joystick->GetRawButton(i))
 			{
-				autoMode = i;
+				if (i < 7)
+					autoMode = i;
+				else if (i >= 7 && i < 12)
+					autoPosition = i - 6;
 				nav->Reset();
 				m_leftDriveEncoder->Reset();
 				m_rightDriveEncoder->Reset();
-				DriverStation::ReportError("Auto mode: " + std::to_string((long)i) + "\n");
+				DriverStation::ReportError("Auto mode: " + std::to_string((long)autoMode) + " position: " + std::to_string((long)autoPosition) + "\n");
 			}
 		}
 		DriverStation::ReportError("Gyro: " + std::to_string((float)nav->GetYaw()) +
@@ -470,6 +475,92 @@ private:
 					break;
 				}
 				break;
+#define AUTO_OVER_DEFENCE -20000
+#define AUTO_LOWBAR_DRIVE -40000
+#define AUTO_AIM_POS_1 -50
+#define AUTO_AIM_POS_2 -30
+#define AUTO_AIM_POS_3 -10
+#define AUTO_AIM_POS_4 5
+#define AUTO_AIM_POS_5 20
+			case 4: // drive over flat defense in any position and shoot high goal
+				switch(autoState){
+				case 0:
+					autoArm(HOME);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_shootE->Set(true);
+					m_shootR->Set(false);
+					autoState++;
+					break;
+				case 1: //drive over defense
+					autoArm(HOME);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_shootE->Set(true);
+					m_shootR->Set(false);
+					if (autoDrive(AUTO_OVER_DEFENCE, 0)){
+						autoState++;
+					}
+					break;
+				case 2: //aim at tower roughly, prep ball
+					autoArm(SHOOT_FAR);
+					shooter1->Set(SPEED_RPM/4.f);
+					shooter2->Set(-SPEED_RPM/4.f);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					int result;
+					switch(autoPosition){
+					case 2:
+						result = autoDrive(AUTO_OVER_DEFENCE, AUTO_AIM_POS_2);
+						break;
+					case 3:
+						result = autoDrive(AUTO_OVER_DEFENCE, AUTO_AIM_POS_3);
+						break;
+					case 4:
+						result = autoDrive(AUTO_OVER_DEFENCE, AUTO_AIM_POS_4);
+						break;
+					case 5:
+						result = autoDrive(AUTO_OVER_DEFENCE, AUTO_AIM_POS_5);
+						break;
+					}
+					if(result)
+						autoState++;
+					break;
+				case 3: //confirm aim with vision
+					shooter1->Set(-SPEED_RPM);
+					shooter2->Set(SPEED_RPM);
+					autoArm(SHOOT_FAR);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					if(aimAtTarget() && (shooter1->GetEncVel() < -SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK)){
+						autoState++;
+						timer->Reset();
+						timer->Start();
+					}
+					break;
+				case 4: //shoot the ball
+					shooter1->Set(-SPEED_RPM);
+					shooter2->Set(SPEED_RPM);
+					autoArm(SHOOT_FAR);
+					m_shootE->Set(true);
+					m_shootR->Set(false);
+					//cylinder = extend|shooter = out|angle = shoot
+					if(timer->Get() > 0.5)
+					{
+						autoState++;
+						timer->Stop();
+						timer->Reset();
+					}
+					break;
+				case 5: //turn off shooter
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					autoArm(HOME);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					break;
+				}
+				break;
 			case 10: //from batter, align to high goal and shoot
 				switch(autoState)
 				{
@@ -576,8 +667,7 @@ private:
 			shooter2->SetSetpoint(0.0);
 		}
 
-#define SPEED_RPM 1500
-#define SHOOTER_SPEED_CHECK 20000
+
 
 		printf("intake: %d error: %d\n", m_intake->GetEncPosition(), m_intake->GetClosedLoopError());
 		if(m_Joystick->GetRawButton(10))
