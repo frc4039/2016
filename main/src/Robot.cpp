@@ -142,10 +142,12 @@ private:
 
 		m_LED = new Relay(0);
 
-		drivePID = new SimPID(0 ,0, 0, 0);
+		drivePID = new SimPID(0.0005 ,0, 0, 100);
 		drivePID->setMinDoneCycles(1);
-		turnPID = new SimPID(0, 0, 0, 0);
+		drivePID->setMaxOutput(0.3);
+		turnPID = new SimPID(0.05, 0, 0, 2);
 		turnPID->setMinDoneCycles(1);
+		turnPID->setMaxOutput(0.3);
 
 		visionPID = new SimPID(0.006, 0.02, 0.002, 5);
 		visionPID->setMaxOutput(0.3);
@@ -348,15 +350,20 @@ private:
 		//FindTargetCenter();
 		//printf("shooter Speed: %f\t%f\n", shooter1->GetSpeed(), shooter2->GetSpeed());
 
-		for (int i = 0; i < 12; i++)
+		for (int i = 1; i <= 12; i++)
 		{
 			if(m_Joystick->GetRawButton(i))
 			{
 				autoMode = i;
+				nav->Reset();
+				m_leftDriveEncoder->Reset();
+				m_rightDriveEncoder->Reset();
 				DriverStation::ReportError("Auto mode: " + std::to_string((long)i) + "\n");
-
 			}
 		}
+		DriverStation::ReportError("Gyro: " + std::to_string((float)nav->GetYaw()) +
+				" enc: " + std::to_string((long)m_leftDriveEncoder->Get()) +
+				", " + std::to_string((long)m_rightDriveEncoder->Get()) + "\n");
 
 		if(m_Joystick->GetRawButton(10)){
 			m_intake->SetPosition(0);
@@ -372,8 +379,6 @@ private:
 			//nav->Reset();
 			m_leftDriveEncoder->Reset();
 			m_rightDriveEncoder->Reset();
-			drivePID->setMaxOutput(0.75);
-			turnPID->setMaxOutput(0.75);
 			shooter1->Set(0.f);
 			shooter2->Set(0.f);
 			timer->Start();
@@ -400,7 +405,7 @@ private:
 				case 1:
 					m_shootE->Set(true);
 					m_shootR->Set(false);
-					autoDrive(5000, 0);
+					autoDrive(7000, 0);
 					break;
 				}
 				break;
@@ -842,8 +847,8 @@ private:
 		drivePID->setDesiredValue(distance);
 		turnPID->setDesiredValue(angle);
 
-		float drive = drivePID->calcPID(currentDist);
-		float turn = turnPID->calcPID(currentAngle);
+		float drive = -drivePID->calcPID(currentDist);
+		float turn = -turnPID->calcPID(currentAngle);
 
 		m_rightDrive2->SetSpeed(-(limit(drive - turn, 1)));
 		m_rightDrive3->SetSpeed(-(limit(drive - turn, 1)));
