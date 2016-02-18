@@ -171,7 +171,7 @@ private:
 		m_intake->SetClosedLoopOutputDirection(true);
 		 */
 
-		//nav = new AHRS(SPI::Port::kMXP);
+		nav = new AHRS(SPI::Port::kMXP);
 
 		m_pusher = new CANTalon(3);
 		/*
@@ -347,6 +347,17 @@ private:
 	{
 		//FindTargetCenter();
 		//printf("shooter Speed: %f\t%f\n", shooter1->GetSpeed(), shooter2->GetSpeed());
+
+		for (int i = 0; i < 12; i++)
+		{
+			if(m_Joystick->GetRawButton(i))
+			{
+				autoMode = i;
+				DriverStation::ReportError("Auto mode: " + std::to_string((long)i) + "\n");
+
+			}
+		}
+
 		if(m_Joystick->GetRawButton(10)){
 			m_intake->SetPosition(0);
 			shooter1->SetPosition(0);
@@ -370,7 +381,7 @@ private:
 
 		void AutonomousPeriodic(void)
 		{
-			/*switch(autoMode)
+			switch(autoMode)
 			{
 			case 0:
 				m_leftDrive4->SetSpeed(0.f);
@@ -378,37 +389,7 @@ private:
 				m_rightDrive2->SetSpeed(0.f);
 				m_rightDrive3->SetSpeed(0.f);
 				break;
-			case 1: //test auto
-				switch(autoState)
-				{
-				case 0:
-					autoState++;
-					break;
-				case 1:
-					shooter1->SetSetpoint(0.8225);
-					shooter2->SetSetpoint(-0.8225);
-					if(m_boulderSwitch->Get() && autoDrive(1000,0))
-					{
-						shooter1->SetSetpoint(0);
-						shooter2->SetSetpoint(0);
-						autoState++;
-					}
-					break;
-				case 2:
-					if(autoDrive(0, 180))
-						autoState++;
-					break;
-				case 3:
-					if(autoDrive(1000, 180))
-						autoState++;
-					break;
-				case 4:
-					shooter1->SetSetpoint(-0.8225);
-					shooter2->SetSetpoint(0.8225);
-					if(m_boulderSwitch->Get() == OPEN)
-						autoState++;
-					break;
-				}
+
 			case 1: //drive forward with boulder preloaded and move under low bar
 				switch(autoState)
 				{
@@ -442,7 +423,7 @@ private:
 					break;
 				}
 				break;
-			case 3: //discharge ball to tower
+			case 3: //drive forward with boulder preloaded, cross low bar, discharge ball to tower, revere to neutral zone through low bar, ready to get next boulder
 				switch(autoState)
 				{
 				case 0:
@@ -466,41 +447,18 @@ private:
 					}
 					break;
 				case 3:
-					m_shootE->Set(false);
-					m_shootR->Set(true);
-					shooter1->SetSetpoint(SHOOT_SPEED/4);
-					shooter2->SetSetpoint(-SHOOT_SPEED/4);
-					if(timer->Get() > 0.5)
-					{
-						shooter1->SetSetpoint(0.f);
-						shooter2->SetSetpoint(0.f);
-						timer->Reset();
-						autoState++;
-					}
-					break;
-				case 4:
-					shooter1->SetSetpoint(-SHOOT_SPEED);
-					shooter2->SetSetpoint(SHOOT_SPEED);
-					m_shootE->Set(false);
-					m_shootR->Set(true);
-					if(timer->Get() > 0.5)
-					{
-						timer->Reset();
-						autoState++;
-					}
-					break;
-				case 5:
 					m_shootE->Set(true);
 					m_shootR->Set(false);
+					shooter1->SetSetpoint(-SHOOT_SPEED/4);
+					shooter2->SetSetpoint(SHOOT_SPEED/4);
 					if(m_boulderSwitch->Get() == OPEN)
 					{
 						shooter1->SetSetpoint(0.f);
 						shooter2->SetSetpoint(0.f);
-						timer->Reset();
 						autoState++;
 					}
 					break;
-				case 6:
+				case 5:
 					m_shootE->Set(true);
 					m_shootR->Set(false);
 					autoDrive(0, 0);
@@ -523,14 +481,14 @@ private:
 				case 2:
 					m_shootE->Set(true);
 					m_shootR->Set(false);
-					m_intake->SetPosition(SHOOT);
+					m_intake->SetPosition(SHOOT_FAR);
 					autoState++;
 					break;
 				case 3:
 					m_shootE->Set(false);
 				}
 				break;
-			}*/
+			}
 		}
 
 	//===========================================================TELEOP=======================================
@@ -876,7 +834,7 @@ private:
 			return armPID->isDone();
 		}
 
-	/*bool autoDrive(int distance, int angle)
+	bool autoDrive(int distance, int angle)
 	{
 		int currentDist = (m_rightDriveEncoder->Get() + m_leftDriveEncoder->Get()) / 2;
 		int currentAngle = nav->GetYaw();
@@ -893,7 +851,7 @@ private:
 		m_leftDrive1->SetSpeed(limit(drive + turn, 1));
 
 		return drivePID->isDone() && turnPID->isDone();
-	}*/
+	}
 
 	//===============================================VISION FUNCTIONS=============================================
 #define AIM_CORRECTION 70
