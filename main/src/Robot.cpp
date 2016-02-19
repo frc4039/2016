@@ -99,7 +99,7 @@ private:
 
 	//vision filter options
 	ParticleFilterOptions2 filterOptions;
-#define CRITERIA_COUNT 3
+#define CRITERIA_COUNT 4
 	ParticleFilterCriteria2 filterCriteria[CRITERIA_COUNT];
 	int num_particlesFound;
 	MeasurementType measurements[1];
@@ -146,8 +146,8 @@ private:
 
 		drivePID = new SimPID(0.0005 ,0, 0, 100);
 		drivePID->setMinDoneCycles(1);
-		drivePID->setMaxOutput(0.3);
-		turnPID = new SimPID(0.05, 0, 0, 2);
+		drivePID->setMaxOutput(0.7);
+		turnPID = new SimPID(0.1, 0, 0, 2);
 		turnPID->setMinDoneCycles(1);
 		turnPID->setMaxOutput(0.3);
 
@@ -257,7 +257,7 @@ private:
 	void ParticleFilterInit(void){
 		//options config
 		filterOptions.connectivity8 = FALSE;
-		filterOptions.fillHoles = TRUE;
+		filterOptions.fillHoles = FALSE;
 		filterOptions.rejectBorder = FALSE;
 		filterOptions.rejectMatches = FALSE;
 
@@ -269,23 +269,23 @@ private:
 
 		//area config
 		filterCriteria[0].parameter = IMAQ_MT_AREA;
-		filterCriteria[0].lower = 500;
-		filterCriteria[0].upper = 1000000;
+		filterCriteria[0].lower = 1500;
+		filterCriteria[0].upper = 1900;
 
 		//width config
 		filterCriteria[1].parameter = IMAQ_MT_BOUNDING_RECT_WIDTH;
-		filterCriteria[1].lower = 60;
-		filterCriteria[1].upper = 300;
+		filterCriteria[1].lower = 90;
+		filterCriteria[1].upper = 130;
 
 		//height config
 		filterCriteria[2].parameter = IMAQ_MT_BOUNDING_RECT_HEIGHT;
-		filterCriteria[2].lower = 50;
-		filterCriteria[2].upper = 300;
+		filterCriteria[2].lower = 40;
+		filterCriteria[2].upper = 80;
 
 		//add perimeter filter
-		//filterCriteria[3].parameter = IMAQ_MT_PERIMETER;
-		//filterCriteria[3].lower = 50;
-		//filterCriteria[3].upper = 100;
+		filterCriteria[3].parameter = IMAQ_MT_PERIMETER;
+		filterCriteria[3].lower = 30;
+		filterCriteria[3].upper = 450;
 }
 
 	void VisionInit(void){
@@ -387,6 +387,8 @@ private:
 			shooter1->Set(0.f);
 			shooter2->Set(0.f);
 			timer->Start();
+			IMAQdxStartAcquisition(session);
+			m_LED->Set(Relay::kForward);
 		}
 
 		void AutonomousPeriodic(void)
@@ -475,13 +477,15 @@ private:
 					break;
 				}
 				break;
-#define AUTO_OVER_DEFENCE -20000
-#define AUTO_LOWBAR_DRIVE -40000
-#define AUTO_AIM_POS_1 -50
-#define AUTO_AIM_POS_2 -30
-#define AUTO_AIM_POS_3 -10
-#define AUTO_AIM_POS_4 5
-#define AUTO_AIM_POS_5 20
+#define AUTO_OVER_MOAT -15250
+#define AUTO_OVER_OTHER -13000
+#define AUTO_LOWBAR_DRIVE -16000
+#define AUTO_AIM_POS_1 50
+#define AUTO_AIM_POS_2 30
+#define AUTO_AIM_POS_3 10
+#define AUTO_AIM_POS_4 -5
+#define AUTO_AIM_POS_5 -20
+
 			case 4: // drive over flat defense in any position and shoot high goal
 				switch(autoState){
 				case 0:
@@ -498,7 +502,7 @@ private:
 					shooter2->Set(0.f);
 					m_shootE->Set(true);
 					m_shootR->Set(false);
-					if (autoDrive(AUTO_OVER_DEFENCE, 0)){
+					if (autoDrive(AUTO_OVER_OTHER, 0)){
 						autoState++;
 					}
 					break;
@@ -511,20 +515,24 @@ private:
 					int result;
 					switch(autoPosition){
 					case 2:
-						result = autoDrive(AUTO_OVER_DEFENCE, AUTO_AIM_POS_2);
+						result = autoDrive(AUTO_OVER_MOAT, AUTO_AIM_POS_2);
 						break;
 					case 3:
-						result = autoDrive(AUTO_OVER_DEFENCE, AUTO_AIM_POS_3);
+						result = autoDrive(AUTO_OVER_MOAT, AUTO_AIM_POS_3);
 						break;
 					case 4:
-						result = autoDrive(AUTO_OVER_DEFENCE, AUTO_AIM_POS_4);
+						result = autoDrive(AUTO_OVER_OTHER, AUTO_AIM_POS_4);
 						break;
 					case 5:
-						result = autoDrive(AUTO_OVER_DEFENCE, AUTO_AIM_POS_5);
+						result = autoDrive(AUTO_OVER_MOAT, AUTO_AIM_POS_5);
 						break;
 					}
 					if(result)
+					{
 						autoState++;
+						timer->Reset();
+						timer->Start();
+					}
 					break;
 				case 3: //confirm aim with vision
 					shooter1->Set(-SPEED_RPM);
@@ -532,7 +540,7 @@ private:
 					autoArm(SHOOT_FAR);
 					m_shootE->Set(false);
 					m_shootR->Set(true);
-					if(aimAtTarget() && (shooter1->GetEncVel() < -SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK)){
+					if(aimAtTarget() == 1 && timer->Get() > 0.5){ //&& (shooter1->GetEncVel() < -SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK)){
 						autoState++;
 						timer->Reset();
 						timer->Start();
@@ -561,6 +569,73 @@ private:
 					break;
 				}
 				break;
+
+			case 5: //under lowbar, shoot with vision high goal
+				switch(autoState)
+				{
+				case 0:
+					autoArm(HOME);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_shootE->Set(true);
+					m_shootR->Set(false);
+					drivePID->setMaxOutput(0.4);
+					autoState++;
+					break;
+				case 1: //drive under lowbar
+					autoArm(PICKUP);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_shootE->Set(true);
+					m_shootR->Set(false);
+					if(autoDrive(AUTO_LOWBAR_DRIVE, 0))
+						autoState++;
+					break;
+				case 2: //rough turn, prep shooter
+					autoArm(SHOOT_FAR);
+					shooter1->Set(SPEED_RPM/4.f);
+					shooter2->Set(-SPEED_RPM/4.f);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					if(autoDrive(AUTO_LOWBAR_DRIVE, AUTO_AIM_POS_1))
+						autoState++;
+					break;
+				case 3: //confirm aim with vision
+					shooter1->Set(-SPEED_RPM);
+					shooter2->Set(SPEED_RPM);
+					autoArm(SHOOT_FAR);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					if(aimAtTarget() == 1 && timer->Get() > 0.5){ //&& (shooter1->GetEncVel() < -SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK)){
+						autoState++;
+						timer->Reset();
+						timer->Start();
+					}
+					break;
+				case 4: //shoot the ball
+					shooter1->Set(-SPEED_RPM);
+					shooter2->Set(SPEED_RPM);
+					autoArm(SHOOT_FAR);
+					m_shootE->Set(true);
+					m_shootR->Set(false);
+					//cylinder = extend|shooter = out|angle = shoot
+					if(timer->Get() > 0.5)
+					{
+						autoState++;
+						timer->Stop();
+						timer->Reset();
+					}
+					break;
+				case 5: //turn off shooter
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					autoArm(HOME);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					break;
+				}
+				break;
+
 			case 10: //from batter, align to high goal and shoot
 				switch(autoState)
 				{
@@ -876,7 +951,7 @@ private:
 				timer->Start();
 				shooterState = 69;
 			}
-			else if(m_Gamepad->GetRawButton(GP_X) && (shooter1->GetEncVel() < -SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK) )
+			else if(m_Gamepad->GetRawButton(GP_X) )//&& (shooter1->GetEncVel() < -SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK) )
 			{
 				timer->Start();
 				shooterState = 80;
@@ -906,7 +981,7 @@ private:
 
 			if(!m_Gamepad->GetRawButton(GP_A))
 				shooterState = 70;
-			if(aimAtTarget() == 1 && (shooter1->GetEncVel() < -SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK)){//goal object detected
+			if(aimAtTarget() == 1 ){//&& (shooter1->GetEncVel() < -SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK)){//goal object detected
 				timer->Start();
 				shooterState = 80;
 			}
@@ -949,7 +1024,7 @@ private:
 	}
 
 	//===============================================VISION FUNCTIONS=============================================
-#define AIM_CORRECTION 70
+#define AIM_CORRECTION 80
 #define AIM_FILTER 1
 #define AIM_LOOP_WAIT 5
 #define AIM_TIMEOUT 2
@@ -1056,7 +1131,7 @@ private:
 				imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_BOUNDING_RECT_WIDTH, &rect_width);
 				imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_CENTER_OF_MASS_Y, &center_mass_y);
 
-				//showBlobMeasurements();
+				showBlobMeasurements();
 
 				//find center based on width
 				centerx = rect_left + (rect_width/2);
@@ -1087,21 +1162,27 @@ private:
 	}
 
 	void showBlobMeasurements(void){
-		double width, left, area, perimeter;
+		double width, left, area, perimeter, height;
 		imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_BOUNDING_RECT_WIDTH, &width);
 		imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_BOUNDING_RECT_LEFT, &left);
 		imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_AREA, &area);
 		imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_PERIMETER, &perimeter);
+		imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_BOUNDING_RECT_HEIGHT, &height);
 
-		printf("width: %d\tleft: %d\tarea: %d\tperimeter: %d\n", (int)width, (int)left, (int)area, (int)perimeter);
+		printf("width: %d\tleft: %d\tarea: %d\tperimeter: %d\theight: %d\n", (int)width, (int)left, (int)area, (int)perimeter, (int)height);
 	}
 
-#define R_THRESHOLD 150
-#define G_THRESHOLD 100
-#define B_THRESHOLD 150
+#define R_THRESHOLD 210
+#define G_THRESHOLD 190
+#define B_THRESHOLD 210
 	inline void BinaryFilter(void){
 		for (int i = 0; i < (RES_X*RES_Y); i++){
-			//printf("R, G, B: (%d, %d, %d)\n", R[i*4], G[i*4], B[i*4]);
+			/*
+			int x = i % RES_X;
+			int y = (int)(i / RES_X);
+			if (y > 400)
+				printf("R, G, B: (%d, %d, %d), (%d, %d)\n", R[i*4], G[i*4], B[i*4], x, y);
+			*/
 			//if it has lots of red
 			if ((R[i*4] > R_THRESHOLD)){
 				proc_pixel[i] = 0;
