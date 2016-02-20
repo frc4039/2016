@@ -23,7 +23,7 @@ typedef long long int Int64;
 
 #define SHOOT_SPEED 0.8225f
 #define PICKUP 1800
-#define SHOOT_FAR 425
+#define SHOOT_FAR 400
 #define SHOOT_CLOSE 550
 #define HOME_SHOOTER 0
 #define HOME_INTAKE 0
@@ -741,7 +741,7 @@ private:
 		}
 	}
 
-#define PRACTICE_DRIVE_LIMIT 0.65
+#define PRACTICE_DRIVE_LIMIT 1
 	inline void teleDrive(void)
 	{
 		leftSpeed = scale(limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 5), 1), 0.75f), PRACTICE_DRIVE_LIMIT);
@@ -1294,7 +1294,7 @@ private:
 	}
 
 	//===============================================VISION FUNCTIONS=============================================
-#define AIM_CORRECTION 80
+#define AIM_CORRECTION 30
 #define AIM_FILTER 1
 #define AIM_LOOP_WAIT 5
 #define AIM_TIMEOUT 2
