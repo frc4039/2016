@@ -823,7 +823,7 @@ private:
 
 	void advancedShoot(void)
 	{
-		//printf("Shooter State: %d\n", shooterState);
+		printf("Shooter State: %d\n", shooterState);
 		//printf("gamepad dY: %d\n", m_Gamepad->GetPOV(0));
 		switch(shooterState)
 		{
@@ -836,6 +836,7 @@ private:
 			if(!m_shooterHomeSwitch->Get())
 				shooterState = 10;
 			else
+
 				shooterState = 20;
 			break;
 		case 10:
@@ -865,7 +866,7 @@ private:
 			//cylinder = extend|angle = pickup
 			shooter1->Set(0.f);
 			shooter2->Set(0.f);
-			autoShooter(HOME_SHOOTER);
+			autoShooter(PICKUP);
 			m_shootE->Set(true);
 			m_shootR->Set(false);
 			if(m_Gamepad->GetPOV() == GP_DOWN)
@@ -877,7 +878,7 @@ private:
 			//cylinder = extend|angle = pickup|shooter = in
 			shooter1->Set(SPEED_RPM/2.f);
 			shooter2->Set(-SPEED_RPM/2.f);
-			autoShooter(HOME_SHOOTER);
+			autoShooter(PICKUP);
 			m_shootE->Set(true);
 			m_shootR->Set(false);
 			if(m_Gamepad->GetPOV() == GP_DOWN)
@@ -891,7 +892,7 @@ private:
 			//cylinder = extend | angle = pickup | shooter out
 			shooter1->Set(SPEED_RPM/2.f);
 			shooter2->Set(SPEED_RPM/2.f);
-			m_shooter->Set(HOME_SHOOTER);
+			m_shooter->Set(PICKUP);
 			m_shootE->Set(true);
 			m_shootR->Set(false);
 			if(m_boulderSwitch->Get() == OPEN)
