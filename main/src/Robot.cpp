@@ -28,6 +28,8 @@ typedef long long int Int64;
 #define HOME_SHOOTER 0
 #define HOME_INTAKE 0
 #define TRANSFER 400
+#define INTAKE_SHOOT_FAR 0
+#define INTAKE_SHOOT_CLOSE 0
 #define SPEED_RPM 1500
 #define SHOOTER_SPEED_CHECK 20000
 
@@ -39,38 +41,33 @@ private:
 	LiveWindow *lw = LiveWindow::GetInstance();
 
 	int autoState, autoMode, autoPosition, shooterState;
-//#ifdef PRACTICE_BOT
-	Victor *m_leftDrive4; //0
-	Victor *m_leftDrive1; //1
-	Victor *m_rightDrive2; //2
-	Victor *m_rightDrive3; //3
-//#else
-	//VictorSP *m_leftDrive4; //0
-	//VictorSP *m_leftDrive1; //1
-	//VictorSP *m_rightDrive2; //2
-	//VictorSP *m_rightDrive3; //3
-//#endif
+	VictorSP *m_leftDrive4; //0
+	VictorSP *m_leftDrive1; //1
+	VictorSP *m_rightDrive2; //2
+	VictorSP *m_rightDrive3; //3
+
+	VictorSP *m_pusher;
+	VictorSP *m_intakeRoller;
+
 	float leftSpeed, rightSpeed;
-	CANTalon *shooter1, *shooter2, *m_shooter;
+
+	CANTalon *shooter1, *shooter2, *m_shooter, *m_intake;
+
 	Relay *m_LED;
-//#ifdef PRACTICE_BOT
-	CANTalon *m_pusher;
-//#else
-	CANTalon *m_intake;
-	//VictorSP *m_pusher;
-//#endif
+
 	Solenoid *m_shiftHigh, *m_shiftLow;
 	Solenoid *m_shootE, *m_shootR;
 
 	SimPID *drivePID;
 	SimPID *turnPID;
 	SimPID *visionPID;
-	SimPID *armPID;
+	SimPID *shooterPID;
+	SimPID *intakePID;
 
 	Joystick *m_Gamepad;
 	Joystick *m_Joystick;
 
-	VictorSP *m_intakeRoller;
+
 
 	Timer *timer;
 	double last_time;
@@ -82,7 +79,9 @@ private:
 	Encoder *m_leftDriveEncoder;
 	Encoder *m_rightDriveEncoder;
 
-	AHRS *nav;
+
+
+	//AHRS *nav;
 
 	//=======================Vision Variables======================
 	IMAQdxSession session;
@@ -124,17 +123,10 @@ private:
 //====================================================INIT==============================================
 	void RobotInit(void) override
 	{
-//#ifdef PRACTICE_BOT
-		m_leftDrive4 = new Victor(4);
-		m_leftDrive1 = new Victor(1);
-		m_rightDrive2 = new Victor(2);
-		m_rightDrive3 = new Victor(3);
-//#else
-		//m_leftDrive4 = new VictorSP(4);
-		//m_leftDrive1 = new VictorSP(1);
-		//m_rightDrive2 = new VictorSP(2);
-		//m_rightDrive3 = new VictorSP(3);
-//#endif
+		m_leftDrive4 = new VictorSP(4);
+		m_leftDrive1 = new VictorSP(1);
+		m_rightDrive2 = new VictorSP(2);
+		m_rightDrive3 = new VictorSP(3);
 
 		//talon = new CANTalon(1);
 		m_shiftHigh = new Solenoid(0);
@@ -166,16 +158,16 @@ private:
 		// shooter2->SetSensorDirection(false);
 		shooter2->SetAllowableClosedLoopErr(1000);
 
-	/*	m_intake = new CANTalon(4);
-		m_intake->SetFeedbackDevice(CANTalon::CtreMagEncoder_Relative);
+		m_intake = new CANTalon(4);
+		/*m_intake->SetFeedbackDevice(CANTalon::CtreMagEncoder_Relative);
 		m_intake->SetControlMode(CANTalon::kPosition);
 		m_intake->SetCloseLoopRampRate(0);
 		m_intake->ConfigEncoderCodesPerRev(4096);
 		m_intake->SetPID(0, 0, 0, 0);
 		m_intake->SelectProfileSlot(0);
-		m_intake->SetAllowableClosedLoopErr(1000);*/
-
-		//m_intakeRoller = new VictorSP(6);
+		m_intake->SetAllowableClosedLoopErr(1000);
+*/
+		m_intakeRoller = new VictorSP(6);
 
 		m_LED = new Relay(0);
 
@@ -190,8 +182,11 @@ private:
 		visionPID->setMaxOutput(0.3);
 		visionPID->setMinDoneCycles(10);
 
-		armPID = new SimPID(0.004, 0, 0.001, 10);
-		armPID->setMaxOutput(0.4);
+		shooterPID = new SimPID(0.004, 0, 0.001, 10);
+		shooterPID->setMaxOutput(0.4);
+
+		intakePID = new SimPID(0, 0, 0, 0);
+		intakePID->setMaxOutput(0.4);
 
 		m_shooterHomeSwitch = new DigitalInput(1);
 		m_boulderSwitch = new DigitalInput(0);
@@ -200,7 +195,6 @@ private:
 		m_rightDriveEncoder = new Encoder(2, 3);
 
 		m_shooter = new CANTalon(2);
-		/*
 		m_shooter->SetPID(1,0,0.4,1);
 		m_shooter->SetFeedbackDevice(CANTalon::QuadEncoder);
 		m_shooter->SetIzone(100);
@@ -208,19 +202,11 @@ private:
 		m_shooter->SelectProfileSlot(0);
 		m_shooter->SetControlMode(CANTalon::kPosition);
 		m_shooter->SetClosedLoopOutputDirection(true);
-		 */
 
-		nav = new AHRS(SPI::Port::kMXP);
 
-		m_pusher = new CANTalon(4);
-		/*
-		m_pusher->SetPID(0,0,0,0);
-		m_pusher->SetFeedbackDevice(CANTalon::QuadEncoder);
-		m_pusher->SetIzone(100);
-		m_pusher->SetCloseLoopRampRate(48);
-		m_pusher->SelectProfileSlot(0);
-		m_pusher->SetControlMode(CANTalon::kPosition);
-		*/
+		//nav = new AHRS(SPI::Port::kMXP);
+
+		m_pusher = new VictorSP(5);
 
 		timer = new Timer();
 		timer->Reset();
@@ -387,6 +373,9 @@ private:
 		//FindTargetCenter();
 		//printf("shooter Speed: %f\t%f\n", shooter1->GetSpeed(), shooter2->GetSpeed());
 
+		if(m_shooterHomeSwitch->Get() == CLOSED)
+			m_shooter->SetPosition(0);
+
 		for (int i = 1; i <= 12; i++)
 		{
 			if(m_Joystick->GetRawButton(i))
@@ -395,18 +384,19 @@ private:
 					autoMode = i;
 				else if (i >= 7 && i < 12)
 					autoPosition = i - 6;
-				nav->Reset();
+				//nav->Reset();
 				m_leftDriveEncoder->Reset();
 				m_rightDriveEncoder->Reset();
 				DriverStation::ReportError("Auto mode: " + std::to_string((long)autoMode) + " position: " + std::to_string((long)autoPosition) + "\n");
 			}
 		}
-		DriverStation::ReportError("Gyro: " + std::to_string((float)nav->GetYaw()) +
+		//DriverStation::ReportError("Gyro: " + std::to_string((float)nav->GetYaw()) +
 				" enc: " + std::to_string((long)m_leftDriveEncoder->Get()) +
 				", " + std::to_string((long)m_rightDriveEncoder->Get()) + "\n");
 
 		if(m_Joystick->GetRawButton(10)){
 			m_shooter->SetPosition(0);
+			m_intake->SetPosition(0);
 			shooter1->SetPosition(0);
 			shooter2->SetPosition(0);
 		}
@@ -711,9 +701,9 @@ private:
 	{
 		operateShifter();
 		//simpleShoot();
-		advancedShoot();
+		//advancedShoot();
 		pusher();
-		//simpleIntake();
+		simpleIntake();
 		//SubtractionFilter();
 		//if (m_pusherHomeSwitch->Get())
 			//m_pusher->Reset();
@@ -814,233 +804,18 @@ private:
 #define PUSHER_OUT 2170
 	inline void pusher(void){
 		if (m_Joystick->GetRawButton(6))
-			m_pusher->SetSetpoint(PUSHER_SPEED);
-		else if (m_Joystick->GetRawButton(4))
-			m_pusher->SetSetpoint(-PUSHER_SPEED);
-		else
-			m_pusher->SetSetpoint(0.f);
-	}
-
-	void advancedShoot(void)
-	{
-		printf("Shooter State: %d\n", shooterState);
-		//printf("gamepad dY: %d\n", m_Gamepad->GetPOV(0));
-		switch(shooterState)
-		{
-		case 0:
-			//everything is off
-			shooter1->Set(0.f);
-			shooter2->Set(0.f);
-			m_shootE->Set(true);
-			m_shootR->Set(false);
-			if(!m_shooterHomeSwitch->Get())
-				shooterState = 10;
-			else
-
-				shooterState = 20;
-			break;
-		case 10:
-			//cylinder = extend|angle = home
-			shooter1->Set(0.f);
-			shooter2->Set(0.f);
-			autoShooter(HOME_SHOOTER);
-			m_shootE->Set(true);
-			m_shootR->Set(false);
-			if(m_Gamepad->GetPOV() == GP_UP)
-				shooterState = 20;
-			else if(m_Gamepad->GetRawButton(GP_B))
-				shooterState = 60;
-			else if(m_Gamepad->GetRawButton(GP_Y))
-				shooterState = 11;
-			break;
-		case 11:
-			shooter1->Set(0.f);
-			shooter2->Set(0.f);
-			autoShooter(HOME_SHOOTER);
-			m_shootE->Set(false);
-			m_shootR->Set(true);
-			if(!m_Gamepad->GetRawButton(GP_Y))
-				shooterState = 50;
-			break;
-		case 20:
-			//cylinder = extend|angle = pickup
-			shooter1->Set(0.f);
-			shooter2->Set(0.f);
-			autoShooter(PICKUP);
-			m_shootE->Set(true);
-			m_shootR->Set(false);
-			if(m_Gamepad->GetPOV() == GP_DOWN)
-				shooterState = 10;
-			else if(m_Gamepad->GetRawButton(GP_R))
-				shooterState = 30;
-			break;
-		case 30:
-			//cylinder = extend|angle = pickup|shooter = in
-			shooter1->Set(SPEED_RPM/2.f);
-			shooter2->Set(-SPEED_RPM/2.f);
-			autoShooter(PICKUP);
-			m_shootE->Set(true);
-			m_shootR->Set(false);
-			if(m_Gamepad->GetPOV() == GP_DOWN)
-				shooterState = 10;
-			else if(m_Gamepad->GetRawButton(GP_L))
-				shooterState = 20;
-			else if(m_boulderSwitch->Get() == CLOSED)
-				shooterState = 40;
-			break;
-		case 39:
-			//cylinder = extend | angle = pickup | shooter out
-			shooter1->Set(SPEED_RPM/2.f);
-			shooter2->Set(SPEED_RPM/2.f);
-			m_shooter->Set(PICKUP);
-			m_shootE->Set(true);
-			m_shootR->Set(false);
-			if(m_boulderSwitch->Get() == OPEN)
-				shooterState = 20;
-			break;
-		case 40:
-			//cylinder = extend|angle = pickup
-			shooter1->Set(0.f);
-			shooter2->Set(0.f);
-			autoShooter(PICKUP);
-			m_shootE->Set(true);
-			m_shootR->Set(false);
-			if(m_Gamepad->GetRawButton(GP_L))
-				shooterState = 20;
-			else if(m_boulderSwitch->Get() == OPEN)
-				shooterState = 30;
-			else if(m_Gamepad->GetRawButton(GP_R))
-				shooterState = 39;
-			else if(m_Gamepad->GetPOV() == GP_DOWN)
-				shooterState = 50;
-			else if(m_Gamepad->GetRawButton(GP_B))
-				shooterState = 60;
-			break;
-		case 50:
-			m_shootE->Set(true);
-			m_shootR->Set(false);
-			autoShooter(HOME_SHOOTER);
-			shooter1->Set(0.f);
-			shooter2->Set(0.f);
-			//cylinder = extend|angle = home
-			if(m_Gamepad->GetPOV() == GP_UP)
-				shooterState = 40;
-			else if(m_Gamepad->GetRawButton(GP_B))
-				shooterState = 60;
-			else if(m_Gamepad->GetRawButton(GP_Y))
-				shooterState = 11;
-			break;
-		case 60:
-			m_shootE->Set(true);
-			m_shootR->Set(false);
-			autoShooter(SHOOT_FAR);
-			shooter1->Set(0.f);
-			shooter2->Set(0.f);
-			//cylinder = extend|angle = shoot
-			if(m_Gamepad->GetPOV() == GP_UP)
-				shooterState = 40;
-			else if(m_Gamepad->GetPOV() == GP_DOWN)
-				shooterState = 50;
-			else if(true  && (m_Gamepad->GetRawButton(GP_A) || m_Gamepad->GetRawButton(GP_X))) //angle == shoot
-			{
-				shooterState = 61;
-				timer->Start();
-			}
-			break;
-		case 61:
-			m_shootE->Set(false);
-			m_shootR->Set(true);
-			shooter1->Set(SPEED_RPM/4.f);
-			shooter2->Set(-SPEED_RPM/4.f);
-			autoShooter(SHOOT_FAR);
-			if(timer->Get() > 0.25)
-			{
-				shooterState = 70;
-				timer->Stop();
-				timer->Reset();
-			}
-			break;
-		case 69:
-			m_shootE->Set(false);
-			m_shootR->Set(true);
-			shooter1->Set(SPEED_RPM/4.f);
-			shooter2->Set(-SPEED_RPM/4.f);
-			autoShooter(SHOOT_FAR);
-			if(timer->Get() > 0.25)
-			{
-				shooterState = 60;
-				timer->Stop();
-				timer->Reset();
-			}
-			break;
-		case 70:
-			m_shootE->Set(false);
-			m_shootR->Set(true);
-			autoShooter(SHOOT_FAR);
-			//shooter1->SetSetpoint(-SHOOT_SPEED);
-			//shooter2->SetSetpoint(SHOOT_SPEED);
-			shooter1->Set(-SPEED_RPM);
-			shooter2->Set(SPEED_RPM);
-			printf("shooter Speed: %d\t%d\terror: %d\t%d\n", shooter1->GetEncVel(), shooter2->GetEncVel(), shooter1->GetClosedLoopError(), shooter2->GetClosedLoopError());
-			//cylinder = retract|shooter = out|angle = shoot
-			if(m_Gamepad->GetRawButton(GP_B))
-			{
-				timer->Start();
-				shooterState = 69;
-			}
-			else if(m_Gamepad->GetRawButton(GP_X) )//&& (shooter1->GetEncVel() < -SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK) )
-			{
-				timer->Start();
-				shooterState = 80;
-			}
-			else if(m_Gamepad->GetRawButton(GP_A))
-				shooterState = 90;
-			break;
-		case 80:
-			printf("Shooting...");
-			// shooter1->SetSetpoint(-SHOOT_SPEED);
-			// shooter2->SetSetpoint(SHOOT_SPEED);
-			shooter1->Set(-SPEED_RPM);
-			shooter2->Set(SPEED_RPM);
-			autoShooter(SHOOT_FAR);
-			m_shootE->Set(true);
-			m_shootR->Set(false);
-			//cylinder = extend|shooter = out|angle = shoot
-			if(timer->Get() > 0.5)
-			{
-				shooterState = 10;
-				timer->Stop();
-				timer->Reset();
-			}
-			break;
-		case 90:
-			//vision
-
-			if(!m_Gamepad->GetRawButton(GP_A))
-				shooterState = 70;
-			if(aimAtTarget() == 1 ){//&& (shooter1->GetEncVel() < -SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK)){//goal object detected
-				timer->Start();
-				shooterState = 80;
-			}
-			break;
-		}
-	}
-
-	/*inline void pusher(void){
-		if (m_Joystick->GetRawButton(6))
 			m_pusher->SetSpeed(PUSHER_SPEED);
 		else if (m_Joystick->GetRawButton(4))
 			m_pusher->SetSpeed(-PUSHER_SPEED);
 		else
 			m_pusher->SetSpeed(0.f);
-
 	}
-	*/
 
-	/*void advancedShoot(void)
+	void advancedShoot(void)
 	{
 		//printf("Shooter State: %d\n", shooterState);
 		//printf("gamepad dY: %d\n", m_Gamepad->GetPOV(0));
+
 		switch(shooterState)
 		{
 		case 0:
@@ -1095,7 +870,7 @@ private:
 			autoIntake(PICKUP);
 			m_shootE->Set(true);
 			m_shootR->Set(false);
-			if(m_Gamepad->GetRawButton(GP_R))
+			if(!m_Gamepad->GetRawButton(GP_R))
 				shooterState = 20;
 			break;
 		case 31:
@@ -1107,7 +882,7 @@ private:
 			autoIntake(PICKUP);
 			m_shootE->Set(true);
 			m_shootR->Set(false);
-			if(m_Gamepad->GetRawButton(GP_L))
+			if(!m_Gamepad->GetRawButton(GP_L))
 				shooterState = 20;
 			break;
 		case 40:
@@ -1149,18 +924,19 @@ private:
 			m_shootR->Set(false);
 			m_intakeRoller->SetSpeed(0.f);
 			autoShooter(SHOOT_FAR);
-			autoIntake(TRANSFER);
+			autoIntake(INTAKE_SHOOT_FAR);
 			shooter1->Set(0.f);
 			shooter2->Set(0.f);
 			if(m_Gamepad->GetPOV() == GP_UP)
 				shooterState = 20;
-			if(m_Gamepad->GetRawButton(GP_B))
+			if(m_Gamepad->GetRawButton(GP_DOWN))
 				shooterState = 10;
-			else if(m_Gamepad->GetRawButton(GP_X))
-				shooterState = 70;
-			else if(m_Gamepad->GetRawButton(GP_A))
-				shooterState = 80;
-
+			else if(m_Gamepad->GetRawButton(GP_X) || m_Gamepad->GetRawButton(GP_A))
+				{
+					shooterState = 70;
+					timer->Reset();
+					timer->Start();
+				}
 			break;
 		case 69:
 			//cancel shot
@@ -1182,7 +958,7 @@ private:
 			m_shootE->Set(false);
 			m_shootR->Set(true);
 			autoShooter(SHOOT_FAR);
-			autoIntake(TRANSFER);
+			autoIntake(INTAKE_SHOOT_FAR);
 			shooter1->Set(-SPEED_RPM);
 			shooter2->Set(SPEED_RPM);
 			printf("shooter Speed: %d\t%d\terror: %d\t%d\n", shooter1->GetEncVel(), shooter2->GetEncVel(), shooter1->GetClosedLoopError(), shooter2->GetClosedLoopError());
@@ -1192,20 +968,26 @@ private:
 				timer->Start();
 				shooterState = 69;
 			}
-			else if(m_Gamepad->GetRawButton(GP_X) )//&& (shooter1->GetEncVel() < -SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK) )
+			else if(m_Gamepad->GetRawButton(GP_X) && timer->Get() > 0.5 )//&& (shooter1->GetEncVel() < -SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK) )
 			{
+				timer->Reset();
 				timer->Start();
 				shooterState = 80;
 			}
 			else if(m_Gamepad->GetRawButton(GP_A))
-				shooterState = 90;
+				{
+					shooterState = 90;
+					timer->Reset();
+					timer->Start();
+				}
+
 			break;
 		case 80:
 			printf("Shooting...");
 			shooter1->Set(-SPEED_RPM);
 			shooter2->Set(SPEED_RPM);
 			autoShooter(SHOOT_FAR);
-			autoIntake(TRANSFER);
+			autoIntake(INTAKE_SHOOT_FAR);
 			m_shootE->Set(true);
 			m_shootR->Set(false);
 			if(timer->Get() > 0.5)
@@ -1220,16 +1002,17 @@ private:
 
 			if(!m_Gamepad->GetRawButton(GP_A))
 				shooterState = 70;
-			if(aimAtTarget() == 1 ){//&& (shooter1->GetEncVel() < -SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK)){//goal object detected
+			if(aimAtTarget() == 1 && timer->Get() > 0.5 ){//&& (shooter1->GetEncVel() < -SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK)){//goal object detected
 				timer->Start();
 				shooterState = 80;
 			}
 			break;
 		}
 	}
-	*/
+
 	inline void simpleIntake()
 	{
+		printf("Intake angle: %d \n", m_intake->GetEncPosition());
 		if(m_Joystick->GetRawButton(3))
 			m_intake->SetSetpoint(0.45);
 		else if(m_Joystick->GetRawButton(5))
@@ -1248,36 +1031,36 @@ private:
 	{
 		int currentTicks = m_shooter->GetPosition();
 
-		armPID->setDesiredValue(ticks);
+		shooterPID->setDesiredValue(ticks);
 
-		float rotate = armPID->calcPID(currentTicks);
+		float rotate = shooterPID->calcPID(currentTicks);
 
 		m_shooter->Set(-rotate);
 
 		//printf("rotate power: %f \t error: %d \t target: %d \n", rotate, currentTicks - ticks, ticks);
 
-		return armPID->isDone();
+		return shooterPID->isDone();
 	}
 
 	bool autoIntake(int ticks)
 		{
 			int currentTicks = m_shooter->GetPosition();
 
-			armPID->setDesiredValue(ticks);
+			intakePID->setDesiredValue(ticks);
 
-			float rotate = armPID->calcPID(currentTicks);
+			float rotate = intakePID->calcPID(currentTicks);
 
 			m_intake->Set(-rotate);
 
 			//printf("rotate power: %f \t error: %d \t target: %d \n", rotate, currentTicks - ticks, ticks);
 
-			return armPID->isDone();
+			return intakePID->isDone();
 		}
 
 	bool autoDrive(int distance, int angle)
 	{
 		int currentDist = (m_rightDriveEncoder->Get() + m_leftDriveEncoder->Get()) / 2;
-		int currentAngle = nav->GetYaw();
+		int currentAngle = 0;//nav->GetYaw();
 
 		drivePID->setDesiredValue(distance);
 		turnPID->setDesiredValue(angle);
