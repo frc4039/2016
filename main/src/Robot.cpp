@@ -212,7 +212,7 @@ private:
 
 		nav = new AHRS(SPI::Port::kMXP);
 
-		m_pusher = new CANTalon(4);
+		m_pusher = new CANTalon(3);
 		/*
 		m_pusher->SetPID(0,0,0,0);
 		m_pusher->SetFeedbackDevice(CANTalon::QuadEncoder);
