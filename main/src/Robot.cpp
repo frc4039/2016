@@ -1373,27 +1373,22 @@ private:
 
 			//find filtered blobs
 			imaqParticleFilter4(particle, processed, filterCriteria, CRITERIA_COUNT, &filterOptions, NULL, &num_particlesFound);
-
+			if(m_Joystick->GetRawButton(12)){
+				sprintf(filename, "/home/lvuser/pic%d.bmp", picture_ID);
+				DriverStation::ReportError("writing picture to file\n");
+				imaqWriteBMPFile(frame, filename, 30, &colourTable);
+				picture_ID++;
+			}
 			if (num_particlesFound > 1){
 				DriverStation::ReportError("ERROR! Multiple blobs found!\n");
 				CameraServer::GetInstance()->SetImage(processed);
 				//unsure which blob is target
-				if(m_Joystick->GetRawButton(12)){
-					sprintf(filename, "/home/lvuser/pic%d.bmp", picture_ID);
-					DriverStation::ReportError("writing picture to file\n");
-					imaqWriteBMPFile(frame, filename, 30, &colourTable);
-				}
 				return -2;
 			}
 			else if (num_particlesFound == 0){
 				//unable to find target
 				DriverStation::ReportError("ERROR! Target not found!\n");
 				CameraServer::GetInstance()->SetImage(frame);
-				if(m_Joystick->GetRawButton(12)){
-					sprintf(filename, "/home/lvuser/pic%d.bmp", picture_ID);
-					DriverStation::ReportError("writing picture to file\n");
-					imaqWriteBMPFile(frame, filename, 30, &colourTable);
-				}
 				return -3;
 			}
 			else if (num_particlesFound == 1){
@@ -1420,11 +1415,6 @@ private:
 			else
 				CameraServer::GetInstance()->SetImage(processed);
 
-			if(m_Joystick->GetRawButton(12)){
-				sprintf(filename, "/home/lvuser/pic%d.bmp", picture_ID);
-				DriverStation::ReportError("writing picture to file\n");
-				imaqWriteBMPFile(frame, filename, 30, &colourTable);
-			}
 			return 0;
 		}
 		// unable to take picture, return error
@@ -1443,9 +1433,9 @@ private:
 		printf("width: %d\tleft: %d\tarea: %d\tperimeter: %d\theight: %d\n", (int)width, (int)left, (int)area, (int)perimeter, (int)height);
 	}
 
-#define R_THRESHOLD 210
-#define G_THRESHOLD 190
-#define B_THRESHOLD 210
+#define R_THRESHOLD 100
+#define G_THRESHOLD 120
+#define B_THRESHOLD 100
 	inline void BinaryFilter(void){
 		for (int i = 0; i < (RES_X*RES_Y); i++){
 			/*
