@@ -890,8 +890,8 @@ private:
 			autoShooter(HOME_SHOOTER);
 			shooter1->Set(0.f);
 			shooter2->Set(0.f);
-			//m_shootE->Set(false);
-			//m_shootR->Set(true);
+			m_shootE->Set(false);
+			m_shootR->Set(true);
 			m_shooterServo->SetAngle(SERVO_IN);
 
 			autoIntake(HOME_INTAKE);
@@ -905,8 +905,8 @@ private:
 			autoShooter(HOME_SHOOTER);
 			shooter1->Set(0.f);
 			shooter2->Set(0.f);
-			//m_shootE->Set(false);
-			//m_shootR->Set(true);
+			m_shootE->Set(false);
+			m_shootR->Set(true);
 			m_shooterServo->SetAngle(SERVO_IN);
 
 			autoIntake(HOME_INTAKE);
@@ -934,8 +934,8 @@ private:
 			autoShooter(HOME_SHOOTER);
 			shooter1->Set(0.f);
 			shooter2->Set(0.f);
-			//m_shootE->Set(true);
-			//m_shootR->Set(false);
+			m_shootE->Set(true);
+			m_shootR->Set(false);
 			m_shooterServo->SetAngle(SERVO_OUT);
 
 			autoIntake(HOME_INTAKE);
@@ -963,8 +963,8 @@ private:
 			autoShooter(HOME_SHOOTER);
 			shooter1->Set(0.f);
 			shooter2->Set(0.f);
-			//m_shootE->Set(false);
-			//m_shootR->Set(true);
+			m_shootE->Set(false);
+			m_shootR->Set(true);
 			m_shooterServo->SetAngle(SERVO_IN);
 
 			autoIntake(PICKUP);
@@ -1022,8 +1022,8 @@ private:
 			autoShooter(HOME_SHOOTER);
 			shooter1->Set(0.f);
 			shooter2->Set(0.f);
-			//m_shootE->Set(false);
-			//m_shootR->Set(true);
+			m_shootE->Set(false);
+			m_shootR->Set(true);
 			m_shooterServo->SetAngle(SERVO_IN);
 
 			autoIntake(TRANSFER);
@@ -1046,8 +1046,8 @@ private:
 			autoShooter(HOME_SHOOTER);
 			shooter1->Set(0.f);
 			shooter2->Set(0.f);
-			//m_shootE->Set(false);
-			//m_shootR->Set(true);
+			m_shootE->Set(false);
+			m_shootR->Set(true);
 			m_shooterServo->SetAngle(SERVO_IN);
 
 			autoIntake(TRANSFER);
@@ -1065,8 +1065,8 @@ private:
 			autoShooter(SHOOT_FAR);
 			shooter1->Set(0.f);
 			shooter2->Set(0.f);
-			//m_shootE->Set(false);
-			//m_shootR->Set(true);
+			m_shootE->Set(false);
+			m_shootR->Set(true);
 			m_shooterServo->SetAngle(SERVO_IN);
 
 			autoIntake(INTAKE_SHOOT_FAR);
@@ -1088,8 +1088,8 @@ private:
 			autoShooter(SHOOT_FAR);
 			shooter1->Set(-SPEED_RPM/4);
 			shooter2->Set(SPEED_RPM/4);
-			//m_shootE->Set(false);
-			//m_shootR->Set(true);
+			m_shootE->Set(false);
+			m_shootR->Set(true);
 			m_shooterServo->SetAngle(SERVO_IN);
 
 			autoIntake(TRANSFER);
@@ -1107,8 +1107,8 @@ private:
 			autoShooter(SHOOT_FAR);
 			shooter1->Set(SPEED_RPM);
 			shooter2->Set(-SPEED_RPM);
-			//m_shootE->Set(false);
-			//m_shootR->Set(true);
+			m_shootE->Set(false);
+			m_shootR->Set(true);
 			m_shooterServo->SetAngle(SERVO_IN);
 
 			autoIntake(INTAKE_SHOOT_FAR);
@@ -1142,8 +1142,8 @@ private:
 			autoShooter(HOME_SHOOTER);
 			shooter1->Set(SPEED_RPM);
 			shooter2->Set(-SPEED_RPM);
-			//m_shootE->Set(false);
-			//m_shootR->Set(true);
+			m_shootE->Set(false);
+			m_shootR->Set(true);
 			m_shooterServo->SetAngle(SERVO_IN);
 
 			autoIntake(INTAKE_SHOOT_FAR);
@@ -1170,8 +1170,8 @@ private:
 			autoShooter(SHOOT_FAR);
 			shooter1->Set(SPEED_RPM);
 			shooter2->Set(-SPEED_RPM);
-			//m_shootE->Set(true);
-			//m_shootR->Set(false);
+			m_shootE->Set(true);
+			m_shootR->Set(false);
 			m_shooterServo->SetAngle(SERVO_OUT);
 
 			autoIntake(INTAKE_SHOOT_FAR);
@@ -1191,8 +1191,8 @@ private:
 			autoShooter(HOME_SHOOTER);
 			shooter1->Set(SPEED_RPM);
 			shooter2->Set(-SPEED_RPM);
-			//m_shootE->Set(true);
-			//m_shootR->Set(false);
+			m_shootE->Set(true);
+			m_shootR->Set(false);
 			m_shooterServo->SetAngle(SERVO_OUT);
 
 			autoIntake(INTAKE_SHOOT_FAR);
