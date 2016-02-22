@@ -82,7 +82,7 @@ private:
 	Encoder *m_leftDriveEncoder;
 	Encoder *m_rightDriveEncoder;
 
-	AHRS *nav;
+	//AHRS *nav;
 
 	//=======================Vision Variables======================
 	IMAQdxSession session;
@@ -210,7 +210,7 @@ private:
 		m_shooter->SetClosedLoopOutputDirection(true);
 		 */
 
-		nav = new AHRS(SPI::Port::kMXP);
+		//nav = new AHRS(SPI::Port::kMXP);
 
 		m_pusher = new CANTalon(3);
 		/*
@@ -395,15 +395,15 @@ private:
 					autoMode = i;
 				else if (i >= 7 && i < 12)
 					autoPosition = i - 6;
-				nav->Reset();
+				//nav->Reset();
 				m_leftDriveEncoder->Reset();
 				m_rightDriveEncoder->Reset();
 				DriverStation::ReportError("Auto mode: " + std::to_string((long)autoMode) + " position: " + std::to_string((long)autoPosition) + "\n");
 			}
 		}
-		DriverStation::ReportError("Gyro: " + std::to_string((float)nav->GetYaw()) +
-				" enc: " + std::to_string((long)m_leftDriveEncoder->Get()) +
-				", " + std::to_string((long)m_rightDriveEncoder->Get()) + "\n");
+		//DriverStation::ReportError("Gyro: " + std::to_string((float)nav->GetYaw()) +
+			//	" enc: " + std::to_string((long)m_leftDriveEncoder->Get()) +
+			//	", " + std::to_string((long)m_rightDriveEncoder->Get()) + "\n");
 
 		if(m_Joystick->GetRawButton(10)){
 			m_shooter->SetPosition(0);
@@ -711,7 +711,7 @@ private:
 	{
 		operateShifter();
 		//simpleShoot();
-		advancedShoot();
+		//advancedShoot();
 		pusher();
 		//simpleIntake();
 		//SubtractionFilter();
@@ -720,7 +720,7 @@ private:
 		//if (m_Joystick->GetRawButton(10))
 			//aimAtTarget();
 		if(shooterState != 90){
-			FindTargetCenter();
+			//FindTargetCenter();
 			teleDrive();
 		}
 		//tempIntake();
@@ -744,8 +744,8 @@ private:
 #define PRACTICE_DRIVE_LIMIT 1
 	inline void teleDrive(void)
 	{
-		leftSpeed = scale(limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 5), 1), 0.75f), PRACTICE_DRIVE_LIMIT);
-		rightSpeed = scale(-limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 5), 1), 0.75f), PRACTICE_DRIVE_LIMIT);
+		leftSpeed = scale(limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT);
+		rightSpeed = scale(-limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT);
 
 		//printf("Joystick x=%f, y=%f\n", x,y);
 		m_leftDrive4->SetSpeed(leftSpeed);
@@ -1277,7 +1277,7 @@ private:
 	bool autoDrive(int distance, int angle)
 	{
 		int currentDist = (m_rightDriveEncoder->Get() + m_leftDriveEncoder->Get()) / 2;
-		int currentAngle = nav->GetYaw();
+		int currentAngle = 0;//nav->GetYaw();
 
 		drivePID->setDesiredValue(distance);
 		turnPID->setDesiredValue(angle);
