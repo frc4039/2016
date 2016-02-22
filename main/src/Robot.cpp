@@ -22,8 +22,8 @@ typedef long long int Int64;
 #define CLOSED 0
 
 #define SHOOT_SPEED 0.8225f
-#define PICKUP 1685
-#define SHOOT_FAR 350
+#define PICKUP 1720
+#define SHOOT_FAR 370
 #define SHOOT_CLOSE 540
 #define HOME_SHOOTER 0
 #define HOME_INTAKE 0
@@ -78,6 +78,7 @@ private:
 
 	DigitalInput *m_shooterHomeSwitch;
 	DigitalInput *m_pusherHomeSwitch;
+	DigitalInput *m_intakeHomeSwitch;
 	DigitalInput *m_boulderSwitch;
 
 	Encoder *m_leftDriveEncoder;
@@ -85,7 +86,7 @@ private:
 
 
 
-	//AHRS *nav;
+	AHRS *nav;
 
 	//=======================Vision Variables======================
 	IMAQdxSession session;
@@ -135,8 +136,8 @@ private:
 		//talon = new CANTalon(1);
 		m_shiftHigh = new Solenoid(0);
 		m_shiftLow = new Solenoid(1);
-		m_shootE = new Solenoid(3);
-		m_shootR = new Solenoid(2);
+		m_shootE = new Solenoid(2);
+		m_shootR = new Solenoid(3);
 
 		m_Joystick = new Joystick(0);
 		m_Gamepad = new Joystick(1);
@@ -182,8 +183,8 @@ private:
 		turnPID->setMinDoneCycles(1);
 		turnPID->setMaxOutput(0.3);
 
-		visionPID = new SimPID(0.006, 0.02, 0.002, 5);
-		visionPID->setMaxOutput(0.3);
+		visionPID = new SimPID(0.00675, 0.04, 0.001, 5);
+		visionPID->setMaxOutput(0.4);
 		visionPID->setMinDoneCycles(10);
 
 		shooterPID = new SimPID(0.002, 0, 0.001, 10);
@@ -194,9 +195,10 @@ private:
 
 		m_shooterHomeSwitch = new DigitalInput(0);
 		//m_boulderSwitch = new DigitalInput(0);
+		m_intakeHomeSwitch = new DigitalInput(1);
 
-		m_leftDriveEncoder = new Encoder(4, 5);
-		m_rightDriveEncoder = new Encoder(2, 3);
+		m_leftDriveEncoder = new Encoder(5, 4);
+		m_rightDriveEncoder = new Encoder(3, 2);
 
 		m_shooter = new CANTalon(2);
 		m_shooter->SetFeedbackDevice(CANTalon::QuadEncoder);
@@ -210,7 +212,7 @@ private:
 		m_shooter->SetClosedLoopOutputDirection(true);
 */
 
-		//nav = new AHRS(SPI::Port::kMXP);
+		nav = new AHRS(SPI::Port::kMXP);
 
 		m_pusher = new VictorSP(5);
 		m_shooterServo = new Servo(7);
@@ -297,8 +299,8 @@ private:
 
 		//area config
 		filterCriteria[0].parameter = IMAQ_MT_AREA;
-		filterCriteria[0].lower = 1500;
-		filterCriteria[0].upper = 1900;
+		filterCriteria[0].lower = 100000;
+		filterCriteria[0].upper = 200000;
 
 		//width config
 		filterCriteria[1].parameter = IMAQ_MT_BOUNDING_RECT_WIDTH;
@@ -382,6 +384,8 @@ private:
 
 		if(m_shooterHomeSwitch->Get() == CLOSED)
 			m_shooter->SetPosition(0);
+		if(m_intakeHomeSwitch->Get() == CLOSED)
+			m_intake->SetPosition(0);
 
 		for (int i = 1; i <= 12; i++)
 		{
@@ -391,15 +395,15 @@ private:
 					autoMode = i;
 				else if (i >= 7 && i < 12)
 					autoPosition = i - 6;
-				//nav->Reset();
+				nav->Reset();
 				m_leftDriveEncoder->Reset();
 				m_rightDriveEncoder->Reset();
 				DriverStation::ReportError("Auto mode: " + std::to_string((long)autoMode) + " position: " + std::to_string((long)autoPosition) + "\n");
 			}
 		}
-		//DriverStation::ReportError("Gyro: " + std::to_string((float)nav->GetYaw()) +
-				//" enc: " + std::to_string((long)m_leftDriveEncoder->Get()) +
-				//", " + std::to_string((long)m_rightDriveEncoder->Get()) + "\n");
+		DriverStation::ReportError("Gyro: " + std::to_string((float)nav->GetYaw()) +
+				" enc: " + std::to_string((long)m_leftDriveEncoder->Get()) +
+				", " + std::to_string((long)m_rightDriveEncoder->Get()) + "\n");
 
 
 		if(m_Joystick->GetRawButton(10)){
@@ -410,14 +414,14 @@ private:
 
 		}
 
-		printf("Shooter angle: %d \n", m_shooter->GetEncPosition());
+		//printf("Shooter angle: %d \n", m_shooter->GetEncPosition());
 	}
 
 	//========================================================AUTONOMOUS=======================================
 	void AutonomousInit(void)
 		{
 			autoState = 0;
-			//nav->Reset();
+			nav->Reset();
 			m_leftDriveEncoder->Reset();
 			m_rightDriveEncoder->Reset();
 			shooter1->Set(0.f);
@@ -522,16 +526,18 @@ private:
 #define AUTO_AIM_POS_3 10
 #define AUTO_AIM_POS_4 -5
 #define AUTO_AIM_POS_5 -20
+#define AUTO_SHOOTER_POS SHOOT_FAR+40
 
 			case 4: // drive over flat defense in any position and shoot high goal
+				printf("autoState: %d\n", autoState);
 				switch(autoState){
 				case 0:
 					autoShooter(HOME_SHOOTER);
 					autoIntake(HOME_INTAKE);
 					shooter1->Set(0.f);
 					shooter2->Set(0.f);
-					//m_shootE->Set(false);
-					//m_shootR->Set(true);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
 					m_shooterServo->SetAngle(SERVO_IN);
 					autoState++;
 					break;
@@ -541,30 +547,32 @@ private:
 					shooter1->Set(0.f);
 					shooter2->Set(0.f);
 					m_intakeRoller->SetSpeed(0.f);
-					//m_shootE->Set(false);
-					//m_shootR->Set(true);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
 					m_shooterServo->SetAngle(SERVO_IN);
 					if (autoDrive(AUTO_OVER_OTHER, 0)){
 						autoState++;
+						timer->Reset();
+						timer->Start();
 					}
 					break;
 
 				case 2: //transfer ball, aim at tower roughly
-					autoShooter(HOME_SHOOTER);
-					autoIntake(TRANSFER);
-					shooter1->Set(-SPEED_RPM/4.f);
-					shooter2->Set(SPEED_RPM/4.f);
-					m_intakeRoller->SetSpeed(-0.6);
-					//m_shootE->Set(false);
-					//m_shootR->Set(true);
+					autoShooter(AUTO_SHOOTER_POS);
+					autoIntake(INTAKE_SHOOT_FAR);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_intakeRoller->SetSpeed(-1);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
 					m_shooterServo->SetAngle(SERVO_IN);
 					int result;
 					switch(autoPosition){
 					case 2:
-						result = autoDrive(AUTO_OVER_MOAT, AUTO_AIM_POS_2);
+						result = autoDrive(AUTO_OVER_OTHER, AUTO_AIM_POS_2);
 						break;
 					case 3:
-						result = autoDrive(AUTO_OVER_MOAT, AUTO_AIM_POS_3);
+						result = autoDrive(AUTO_OVER_OTHER, AUTO_AIM_POS_3);
 						break;
 					case 4:
 						result = autoDrive(AUTO_OVER_OTHER, AUTO_AIM_POS_4);
@@ -573,7 +581,7 @@ private:
 						result = autoDrive(AUTO_OVER_MOAT, AUTO_AIM_POS_5);
 						break;
 					}
-					if(result)
+					if(result && timer->Get() > 1.5)
 					{
 						autoState++;
 						timer->Reset();
@@ -583,10 +591,11 @@ private:
 				case 3: //prep ball, confirm aim with vision
 					shooter1->Set(SPEED_RPM);
 					shooter2->Set(-SPEED_RPM);
-					autoShooter(SHOOT_FAR);
+					autoShooter(AUTO_SHOOTER_POS);
 					autoIntake(INTAKE_SHOOT_FAR);
-					//m_shootE->Set(false);
-					//m_shootR->Set(true);
+					m_intakeRoller->SetSpeed(0.f);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
 					m_shooterServo->SetAngle(SERVO_IN);
 					if(aimAtTarget() == 1 && timer->Get() > 0.75){ //&& (shooter1->GetEncVel() < -SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK)){
 						autoState++;
@@ -599,9 +608,10 @@ private:
 					shooter2->Set(-SPEED_RPM);
 					autoShooter(SHOOT_FAR);
 					autoIntake(INTAKE_SHOOT_FAR);
-					//m_shootE->Set(true);
-					//m_shootR->Set(false);
+					m_shootE->Set(true);
+					m_shootR->Set(false);
 					m_shooterServo->SetAngle(SERVO_OUT);
+					m_intakeRoller->SetSpeed(0.f);
 					if(timer->Get() > 0.75)
 					{
 						autoState++;
@@ -614,14 +624,16 @@ private:
 					shooter2->Set(0.f);
 					autoShooter(HOME_SHOOTER);
 					autoIntake(HOME_INTAKE);
-					//m_shootE->Set(false);
-					//m_shootR->Set(true);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
 					m_shooterServo->SetAngle(SERVO_IN);
+					m_intakeRoller->SetSpeed(0.f);
 					break;
 				}
 				break;
 
 			case 5: //under lowbar, shoot with vision high goal
+				printf("autoState: %d\n", autoState);
 				switch(autoState)
 				{
 				case 0:
@@ -629,8 +641,8 @@ private:
 					autoIntake(HOME_INTAKE);
 					shooter1->Set(0.f);
 					shooter2->Set(0.f);
-					//m_shootE->Set(true);
-					//m_shootR->Set(false);
+					m_shootE->Set(true);
+					m_shootR->Set(false);
 					m_shooterServo->SetAngle(SERVO_IN);
 					drivePID->setMaxOutput(0.5);
 					autoState++;
@@ -640,8 +652,8 @@ private:
 					autoIntake(PICKUP);
 					shooter1->Set(0.f);
 					shooter2->Set(0.f);
-					//m_shootE->Set(true);
-					//m_shootR->Set(false);
+					m_shootE->Set(true);
+					m_shootR->Set(false);
 					m_shooterServo->SetAngle(SERVO_IN);
 					if(autoDrive(AUTO_LOWBAR_DRIVE, 0))
 						{
@@ -655,8 +667,8 @@ private:
 					autoIntake(TRANSFER);
 					shooter1->Set(0.f);
 					shooter2->Set(0.f);
-					//m_shootE->Set(true);
-					//m_shootR->Set(false);
+					m_shootE->Set(true);
+					m_shootR->Set(false);
 					m_shooterServo->SetAngle(SERVO_IN);
 					if(timer->Get() > 1.5)
 						autoState++;
@@ -667,8 +679,8 @@ private:
 					shooter1->Set(0.f);
 					shooter2->Set(0.f);
 					m_intakeRoller->SetSpeed(-0.6);
-					//m_shootE->Set(false);
-					//m_shootR->Set(true);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
 					m_shooterServo->SetAngle(SERVO_IN);
 					if(autoDrive(AUTO_LOWBAR_DRIVE, AUTO_AIM_POS_1))
 						autoState++;
@@ -679,8 +691,8 @@ private:
 					m_intakeRoller->SetSpeed(0.f);
 					autoShooter(SHOOT_FAR);
 					autoIntake(INTAKE_SHOOT_FAR);
-					//m_shootE->Set(false);
-					//m_shootR->Set(true);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
 					m_shooterServo->SetAngle(SERVO_IN);
 					if(aimAtTarget() == 1 && timer->Get() > 1.0){ //&& (shooter1->GetEncVel() < -SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK)){
 						autoState++;
@@ -693,8 +705,8 @@ private:
 					shooter2->Set(-SPEED_RPM);
 					autoShooter(SHOOT_FAR);
 					autoIntake(INTAKE_SHOOT_FAR);
-					//m_shootE->Set(true);
-					//m_shootR->Set(false);
+					m_shootE->Set(true);
+					m_shootR->Set(false);
 					m_shooterServo->SetAngle(SERVO_OUT);
 
 					if(timer->Get() > 0.5)
@@ -709,8 +721,8 @@ private:
 					shooter2->Set(0.f);
 					autoShooter(HOME_SHOOTER);
 					autoIntake(HOME_INTAKE);
-					//m_shootE->Set(false);
-					//m_shootR->Set(true);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
 					m_shooterServo->SetAngle(SERVO_IN);
 					break;
 				}
@@ -1211,6 +1223,7 @@ private:
 				shooterState = 70;
 			if(aimAtTarget() == 1 && timer->Get() > 0.5 ){//&& (shooter1->GetEncVel() < -SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK)){//goal object detected
 				timer->Start();
+				timer->Reset();
 				shooterState = 80;
 			}
 			break;
@@ -1268,7 +1281,7 @@ private:
 	bool autoDrive(int distance, int angle)
 	{
 		int currentDist = (m_rightDriveEncoder->Get() + m_leftDriveEncoder->Get()) / 2;
-		int currentAngle = 0;//nav->GetYaw();
+		int currentAngle = nav->GetYaw();
 
 		drivePID->setDesiredValue(distance);
 		turnPID->setDesiredValue(angle);
@@ -1285,12 +1298,12 @@ private:
 	}
 
 	//===============================================VISION FUNCTIONS=============================================
-#define AIM_CORRECTION 80
-#define AIM_FILTER 1
-#define AIM_LOOP_WAIT 5
+#define AIM_CORRECTION 40
+#define AIM_FILTER 0.55
+#define AIM_LOOP_WAIT 2
 #define AIM_TIMEOUT 2
-#define AIM_FINE_LIMIT 20
-#define CLOSE_LIMIT 220
+#define AIM_FINE_LIMIT 10
+#define CLOSE_LIMIT 0
 
 #define IMAGE_CENTER 320
 	int aim_loop_counter;
@@ -1318,10 +1331,12 @@ private:
 			//SmartDashboard::PutNumber("Motor Output", turn);
 		}
 
-		if (center_mass_y < CLOSE_LIMIT)
-			autoShooter(SHOOT_CLOSE);
-		else
-			autoShooter(SHOOT_FAR);
+		if(!IsAutonomous()){
+			if (center_mass_y < CLOSE_LIMIT)
+				autoShooter(SHOOT_CLOSE);
+			else
+				autoShooter(SHOOT_FAR);
+		}
 
 		//if image hasn't been found in a while then stop moving
 		if (aim_loop_counter - AIM_LOOP_WAIT >= AIM_TIMEOUT){
@@ -1373,17 +1388,12 @@ private:
 
 			//find filtered blobs
 			imaqParticleFilter4(particle, processed, filterCriteria, CRITERIA_COUNT, &filterOptions, NULL, &num_particlesFound);
+			//showBlobMeasurements();
 			if(m_Joystick->GetRawButton(12)){
 				sprintf(filename, "/home/lvuser/pic%d.bmp", picture_ID);
 				DriverStation::ReportError("writing picture to file\n");
 				imaqWriteBMPFile(frame, filename, 30, &colourTable);
 				picture_ID++;
-			}
-			if (num_particlesFound > 1){
-				DriverStation::ReportError("ERROR! Multiple blobs found!\n");
-				CameraServer::GetInstance()->SetImage(processed);
-				//unsure which blob is target
-				return -2;
 			}
 			else if (num_particlesFound == 0){
 				//unable to find target
@@ -1391,13 +1401,13 @@ private:
 				CameraServer::GetInstance()->SetImage(frame);
 				return -3;
 			}
-			else if (num_particlesFound == 1){
+			else if (num_particlesFound > 0){
 				//take measurements
-				imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_BOUNDING_RECT_LEFT, &rect_left);
-				imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_BOUNDING_RECT_WIDTH, &rect_width);
-				imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_CENTER_OF_MASS_Y, &center_mass_y);
+				int blob = pickBlob(num_particlesFound);
+				imaqMeasureParticle(particle, blob, FALSE, IMAQ_MT_BOUNDING_RECT_LEFT, &rect_left);
+				imaqMeasureParticle(particle, blob, FALSE, IMAQ_MT_BOUNDING_RECT_WIDTH, &rect_width);
+				imaqMeasureParticle(particle, blob, FALSE, IMAQ_MT_CENTER_OF_MASS_Y, &center_mass_y);
 
-				showBlobMeasurements();
 
 				//find center based on width
 				centerx = rect_left + (rect_width/2);
@@ -1422,20 +1432,51 @@ private:
 		return -1;
 	}
 
-	void showBlobMeasurements(void){
-		double width, left, area, perimeter, height;
-		imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_BOUNDING_RECT_WIDTH, &width);
-		imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_BOUNDING_RECT_LEFT, &left);
-		imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_AREA, &area);
-		imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_PERIMETER, &perimeter);
-		imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_BOUNDING_RECT_HEIGHT, &height);
+	int pickBlob(int num_blobs){
+		double width[num_blobs], left[num_blobs], area[num_blobs], perimeter[num_blobs], height[num_blobs], aspect[num_blobs], fill[num_blobs];
+		double maxArea = 0, maxAreaIndex = 0;
+		for (int i = 0; i < num_particlesFound; i++){
+			imaqMeasureParticle(particle, i, FALSE, IMAQ_MT_BOUNDING_RECT_WIDTH, &width[i]);
+			imaqMeasureParticle(particle, i, FALSE, IMAQ_MT_BOUNDING_RECT_LEFT, &left[i]);
+			imaqMeasureParticle(particle, i, FALSE, IMAQ_MT_AREA, &area[i]);
+			imaqMeasureParticle(particle, i, FALSE, IMAQ_MT_PERIMETER, &perimeter[i]);
+			imaqMeasureParticle(particle, i, FALSE, IMAQ_MT_BOUNDING_RECT_HEIGHT, &height[i]);
 
-		printf("width: %d\tleft: %d\tarea: %d\tperimeter: %d\theight: %d\n", (int)width, (int)left, (int)area, (int)perimeter, (int)height);
+			aspect[i] = height[i] / width[i];
+			fill[i] = area[i] / width[i] * height[i];
+
+			//printf("blob%d width: %d\tleft: %d\tarea: %d\tperimeter: %d\theight: %d, aspect: %f, fill: %f\n",
+								//i, (int)width[i], (int)left[i], (int)area[i], (int)perimeter[i], (int)height[i], (float)aspect[i], (float)fill[i]);
+
+			if (area[i] > maxArea && area[i] > 1000){
+				//printf("area %d is bigger than %d, index %d\n", (int)area[i], (int)maxArea, (int)maxAreaIndex);
+				maxArea = area[i];
+				maxAreaIndex = i;
+			}
+		}
+		printf("picking blob %d\n", (int)maxAreaIndex);
+		return (int)maxAreaIndex;
+	}
+	void showBlobMeasurements(void){
+		double width, left, area, perimeter, height, aspect, fill;
+		for (int i = 0; i < num_particlesFound; i++){
+			imaqMeasureParticle(particle, i, FALSE, IMAQ_MT_BOUNDING_RECT_WIDTH, &width);
+			imaqMeasureParticle(particle, i, FALSE, IMAQ_MT_BOUNDING_RECT_LEFT, &left);
+			imaqMeasureParticle(particle, i, FALSE, IMAQ_MT_AREA, &area);
+			imaqMeasureParticle(particle, i, FALSE, IMAQ_MT_PERIMETER, &perimeter);
+			imaqMeasureParticle(particle, i, FALSE, IMAQ_MT_BOUNDING_RECT_HEIGHT, &height);
+
+			aspect = height / width;
+			fill = area / (width * height);
+
+			printf("blob%d width: %d\tleft: %d\tarea: %d\tperimeter: %d\theight: %d, aspect: %f, fill: %f\n",
+					i, (int)width, (int)left, (int)area, (int)perimeter, (int)height, (float)aspect, (float)fill);
+		}
 	}
 
-#define R_THRESHOLD 100
-#define G_THRESHOLD 120
-#define B_THRESHOLD 100
+#define R_THRESHOLD 90
+#define G_THRESHOLD 100
+#define B_THRESHOLD 90
 	inline void BinaryFilter(void){
 		for (int i = 0; i < (RES_X*RES_Y); i++){
 			/*
