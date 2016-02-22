@@ -23,7 +23,8 @@ typedef long long int Int64;
 
 #define SHOOT_SPEED 0.8225f
 #define PICKUP 1720
-#define SHOOT_FAR 370
+#define SHOOT_LOWBAR 370
+#define SHOOT_FAR 390
 #define SHOOT_CLOSE 540
 #define HOME_SHOOTER 0
 #define HOME_INTAKE 0
@@ -183,7 +184,7 @@ private:
 		turnPID->setMinDoneCycles(1);
 		turnPID->setMaxOutput(0.3);
 
-		visionPID = new SimPID(0.00675, 0.04, 0.001, 5);
+		visionPID = new SimPID(0.00675, 0.02, 0.001, 5);
 		visionPID->setMaxOutput(0.4);
 		visionPID->setMinDoneCycles(10);
 
@@ -1298,8 +1299,8 @@ private:
 	}
 
 	//===============================================VISION FUNCTIONS=============================================
-#define AIM_CORRECTION 40
-#define AIM_FILTER 0.55
+#define AIM_CORRECTION 45
+#define AIM_FILTER 0.50
 #define AIM_LOOP_WAIT 2
 #define AIM_TIMEOUT 2
 #define AIM_FINE_LIMIT 10
