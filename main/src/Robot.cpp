@@ -1383,23 +1383,19 @@ private:
 			//find filtered blobs
 			imaqParticleFilter4(particle, processed, filterCriteria, CRITERIA_COUNT, &filterOptions, NULL, &num_particlesFound);
 
-			if (num_particlesFound > 1){
-				DriverStation::ReportError("ERROR! Multiple blobs found!\n");
-				CameraServer::GetInstance()->SetImage(processed);
-				//unsure which blob is target
-				return -2;
-			}
-			else if (num_particlesFound == 0){
+
+			if (num_particlesFound == 0){
 				//unable to find target
 				DriverStation::ReportError("ERROR! Target not found!\n");
 				CameraServer::GetInstance()->SetImage(frame);
 				return -3;
 			}
-			else if (num_particlesFound == 1){
+			else if (num_particlesFound > 0){
 				//take measurements
-				imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_BOUNDING_RECT_LEFT, &rect_left);
-				imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_BOUNDING_RECT_WIDTH, &rect_width);
-				imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_CENTER_OF_MASS_Y, &center_mass_y);
+				int blob = pickBlob(num_particlesFound);
+				imaqMeasureParticle(particle, blob, FALSE, IMAQ_MT_BOUNDING_RECT_LEFT, &rect_left);
+				imaqMeasureParticle(particle, blob, FALSE, IMAQ_MT_BOUNDING_RECT_WIDTH, &rect_width);
+				imaqMeasureParticle(particle, blob, FALSE, IMAQ_MT_CENTER_OF_MASS_Y, &center_mass_y);
 
 				showBlobMeasurements();
 
@@ -1430,21 +1426,53 @@ private:
 		DriverStation::ReportError("ERROR! Unable to take picture!\n");
 		return -1;
 	}
+	int pickBlob(int num_blobs)
+	{
+		double width[num_blobs], left[num_blobs], area[num_blobs], perimeter[num_blobs], height[num_blobs], aspect[num_blobs], fill[num_blobs];
+		double maxArea = 0, maxAreaIndex = 0;
+		for (int i = 0; i < num_particlesFound; i++)
+		{
+			imaqMeasureParticle(particle, i , FALSE, IMAQ_MT_BOUNDING_RECT_WIDTH, &width[i]);
+			imaqMeasureParticle(particle, i , FALSE, IMAQ_MT_BOUNDING_RECT_LEFT, &left[i]);
+			imaqMeasureParticle(particle, i , FALSE, IMAQ_MT_AREA, &area[i]);
+			imaqMeasureParticle(particle, i , FALSE, IMAQ_MT_PERIMETER, &perimeter[i]);
+			imaqMeasureParticle(particle, i , FALSE, IMAQ_MT_BOUNDING_RECT_HEIGHT, &height[i]);
 
+			aspect[i] = height[i] / width[i];
+			fill[i] = area[i] / width[i] * height[i];
+
+			if (area[i] > maxArea && area[i] > 1000)
+			{
+				maxArea = area[i];
+				maxAreaIndex = i;
+			}
+		}
+		printf("picking blob %d\n", (int)maxAreaIndex);
+		return (int)maxAreaIndex;
+	}
 	void showBlobMeasurements(void){
-		double width, left, area, perimeter, height;
-		imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_BOUNDING_RECT_WIDTH, &width);
-		imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_BOUNDING_RECT_LEFT, &left);
-		imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_AREA, &area);
-		imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_PERIMETER, &perimeter);
-		imaqMeasureParticle(particle, 0, FALSE, IMAQ_MT_BOUNDING_RECT_HEIGHT, &height);
+		double width, left, area, perimeter, height, aspect, fill;
+		for (int i = 0; i < num_particlesFound; i++)
+		{
+			imaqMeasureParticle(particle, i, FALSE, IMAQ_MT_BOUNDING_RECT_WIDTH, &width);
+			imaqMeasureParticle(particle, i, FALSE, IMAQ_MT_BOUNDING_RECT_LEFT, &left);
+			imaqMeasureParticle(particle, i, FALSE, IMAQ_MT_AREA, &area);
+			imaqMeasureParticle(particle, i, FALSE, IMAQ_MT_PERIMETER, &perimeter);
+			imaqMeasureParticle(particle, i, FALSE, IMAQ_MT_BOUNDING_RECT_HEIGHT, &height);
 
+			aspect = height / width;
+			fill = area / (width *height);
+
+			printf("blob%d width: %d\tleft: %d\tarea: %d\tperimeter: %d\theight: %d, aspect: %f, fill: %f\n", i, (int)width, (int)left,
+					(int)area, (int)perimeter, (int)height, (float)aspect, (float)fill);
+
+		}
 		printf("width: %d\tleft: %d\tarea: %d\tperimeter: %d\theight: %d\n", (int)width, (int)left, (int)area, (int)perimeter, (int)height);
 	}
 
-#define R_THRESHOLD 210
-#define G_THRESHOLD 190
-#define B_THRESHOLD 210
+#define R_THRESHOLD 90
+#define G_THRESHOLD 100
+#define B_THRESHOLD 90
 	inline void BinaryFilter(void){
 		for (int i = 0; i < (RES_X*RES_Y); i++){
 			/*
