@@ -1,0 +1,19 @@
+#!/bin/bash
+
+dest=../dev/sampleImages/competition
+i="0"
+
+if [ ! -d "$dest" ]; then
+	mkdir $dest
+	echo "making destination folder"
+fi 
+
+echo "beginning fetch"
+
+while scp -o ConnectTimeout=5 admin@10.40.39.2:/home/lvuser/pic"$i".bmp $dest 
+do
+	echo retrieved pic $i
+	i=$[$i+1]
+done 
+
+echo fetch complete
