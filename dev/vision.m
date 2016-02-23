@@ -55,16 +55,10 @@ function vision
                 pix = 0;
             end
             
-%             raw(i, j, 1)
-%             raw(i, j, 2)
-%             raw(i, j, 3)
-            
             bin(i,j) = pix;
-           
-            test(i,j) = raw(i,j,1);
         end
     end
     %bin
-    image(bin);
-    %image(raw);
+   % image(bin);
+    image(raw);
  
