@@ -116,7 +116,7 @@ private:
 	float64 Gr, Gb, Gg;
 	int picture_ID;
 	char filename[25];
-	double rect_left, rect_width, center_mass_y, centerx, last_turn;
+	double rect_left, rect_width, target_y, centerx, last_turn;
 
 
 	//vision filter options
@@ -1219,14 +1219,35 @@ private:
 			}
 			break;
 
+		case 82:
+			printf("Shooting...");
+			autoShooter(findShooterAngle());
+			shooter1->Set(SPEED_RPM);
+			shooter2->Set(-SPEED_RPM);
+			m_shootE->Set(true);
+			m_shootR->Set(false);
+			m_shooterServo->SetAngle(SERVO_OUT);
+
+			autoIntake(INTAKE_SHOOT_FAR);
+			//m_intakeRoller->SetSpeed(0.f);
+
+			if(timer->Get() > 1.0)
+			{
+				shooterState = 10;
+				timer->Stop();
+				timer->Reset();
+			}
+			break;
 		case 90: //vision
+			autoShooter(findShooterAngle());
 			if(!m_Gamepad->GetRawButton(GP_A))
 				shooterState = 70;
 			if(aimAtTarget() == 1 && timer->Get() > 0.5 ){//&& (shooter1->GetEncVel() < -SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK)){//goal object detected
 				timer->Start();
 				timer->Reset();
-				shooterState = 80;
+				shooterState = 82;
 			}
+			autoShooter(findShooterAngle());
 			break;
 		}
 	}
@@ -1333,7 +1354,7 @@ private:
 		}
 
 		if(!IsAutonomous()){
-			if (center_mass_y < CLOSE_LIMIT)
+			if (target_y < CLOSE_LIMIT)
 				autoShooter(SHOOT_CLOSE);
 			else
 				autoShooter(SHOOT_FAR);
@@ -1407,18 +1428,18 @@ private:
 				int blob = pickBlob(num_particlesFound);
 				imaqMeasureParticle(particle, blob, FALSE, IMAQ_MT_BOUNDING_RECT_LEFT, &rect_left);
 				imaqMeasureParticle(particle, blob, FALSE, IMAQ_MT_BOUNDING_RECT_WIDTH, &rect_width);
-				imaqMeasureParticle(particle, blob, FALSE, IMAQ_MT_CENTER_OF_MASS_Y, &center_mass_y);
+				imaqMeasureParticle(particle, blob, FALSE, IMAQ_MT_BOUNDING_RECT_TOP, &target_y);
 
 
 				//find center based on width
 				centerx = rect_left + (rect_width/2);
 
 				//optional draw circle, or reference lines for visual confirmation
-				//imaqDrawShapeOnImage(processed, processed, {(int)(center_mass_y - (rect_width/2.f)), (int)(centerx - (rect_width/2.f)), (int)rect_width, (int)rect_width}, IMAQ_DRAW_INVERT,IMAQ_SHAPE_OVAL,0);
+				//imaqDrawShapeOnImage(processed, processed, {(int)(target_y - (rect_width/2.f)), (int)(centerx - (rect_width/2.f)), (int)rect_width, (int)rect_width}, IMAQ_DRAW_INVERT,IMAQ_SHAPE_OVAL,0);
 				imaqDrawShapeOnImage(processed, processed, {0, IMAGE_CENTER+AIM_CORRECTION, RES_Y-1, 1}, IMAQ_DRAW_INVERT, IMAQ_SHAPE_RECT, 0);
-				imaqDrawShapeOnImage(processed, processed, {(int)(center_mass_y - rect_width/2.f), (int)centerx, (int)(rect_width/2), 1}, IMAQ_DRAW_INVERT, IMAQ_SHAPE_RECT, 0);
+				imaqDrawShapeOnImage(processed, processed, {(int)(target_y - rect_width/2.f), (int)centerx, (int)(rect_width/2), 1}, IMAQ_DRAW_INVERT, IMAQ_SHAPE_RECT, 0);
 				SmartDashboard::PutNumber("target center", centerx);
-				//printf("target width, x, y: %f\t%f\t%f\n", rect_width, centerx, center_mass_y);
+				//printf("target width, x, y: %f\t%f\t%f\n", rect_width, centerx, target_y);
 			}
 
 			if (m_Joystick->GetRawButton(11))
@@ -1526,6 +1547,14 @@ private:
 	}
 
 	//=============================================MATHY FUNCTIONS=======================================
+	inline float findShooterAngle()
+	{
+#define SLOPE -0.0779f
+#define INTERCEPT 58.699f
+#define SHOOTER_TRIM 0.f
+		return (SLOPE*target_y + INTERCEPT + SHOOTER_TRIM)*(4096.f/360.f);
+	}
+
 	inline float expo(float x, int n)
 	{
 		int sign = n % 2;
@@ -1551,5 +1580,7 @@ private:
 			return -lim;
 		return x;
 	}
+
+
 };
 START_ROBOT_CLASS(Robot)
