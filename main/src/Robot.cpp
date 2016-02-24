@@ -172,7 +172,7 @@ private:
 		m_intake->SetPID(0, 0, 0, 0);
 		m_intake->SelectProfileSlot(0);
 		m_intake->SetAllowableClosedLoopErr(1000);
-*/
+		 */
 		m_intakeRoller = new VictorSP(6);
 
 		m_LED = new Relay(0);
@@ -199,7 +199,7 @@ private:
 		m_intakeHomeSwitch = new DigitalInput(1);
 
 		m_leftDriveEncoder = new Encoder(5, 4);
-		m_rightDriveEncoder = new Encoder(3, 2);
+		m_rightDriveEncoder = new Encoder(2, 3);
 
 		m_shooter = new CANTalon(2);
 		m_shooter->SetFeedbackDevice(CANTalon::QuadEncoder);
