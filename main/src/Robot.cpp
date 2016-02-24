@@ -1540,13 +1540,14 @@ private:
 	}
 
 	//=============================================MATHY FUNCTIONS=======================================
-	inline float findShooterAngle()
+	inline int findShooterAngle()
 	{
 #define SLOPE -0.0779f
 #define INTERCEPT 43.699f
 #define SHOOTER_TRIM 0.f
 		return (SLOPE*target_y + INTERCEPT + SHOOTER_TRIM)*(4096.f/360.f);
 	}
+
 	inline float expo(float x, int n)
 	{
 		int sign = n % 2;
