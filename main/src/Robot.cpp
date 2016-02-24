@@ -1547,7 +1547,7 @@ private:
 	}
 
 	//=============================================MATHY FUNCTIONS=======================================
-	inline float findShooterAngle()
+	inline int findShooterAngle()
 	{
 #define SLOPE -0.0779f
 #define INTERCEPT 58.699f
