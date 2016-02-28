@@ -186,15 +186,18 @@ private:
 		visionPID->setMinDoneCycles(10);
 
 		m_shooterHomeSwitch = new DigitalInput(1);
-		m_boulderSwitch = new DigitalInput(0);
+		//m_boulderSwitch = new DigitalInput(0);
 
 		m_leftDriveEncoder = new Encoder(4, 5);
 		m_rightDriveEncoder = new Encoder(2, 3);
 
 		m_shooter = new CANTalon(2);
-		m_shooter->SetFeedbackDevice(CANTalon::QuadEncoder);
+		m_shooter->SetFeedbackDevice(CANTalon::CtreMagEncoder_Relative);
+		m_shooter->SetSensorDirection(true);
 
-		m_intake = new CANTalon(3);
+		m_intake = new CANTalon(4);
+		m_intake->SetFeedbackDevice(CANTalon::CtreMagEncoder_Relative);
+
 
 		nav = new AHRS(SPI::Port::kMXP);
 
@@ -352,7 +355,6 @@ private:
 			DriverStation::ReportError("IMAQdxConfigureGrab error: " + std::to_string((long)imaqError) + "\n");
 		}
 
-		printf("Robot initialized");
 	}
 
 	//======================================END OF INIT=======================================================
@@ -367,8 +369,8 @@ private:
 		//FindTargetCenter();
 		//printf("shooter Speed: %f\t%f\n", shooter1->GetSpeed(), shooter2->GetSpeed());
 
-		if(m_shooterHomeSwitch->Get() == CLOSED)
-			m_shooter->SetPosition(0);
+		//if(m_shooterHomeSwitch->Get() == CLOSED)
+			//m_shooter->SetPosition(0);
 
 		for (int i = 1; i <= 12; i++)
 		{
@@ -397,8 +399,6 @@ private:
 			shooter2->SetPosition(0);
 		}
 
-
-		printf("Robot disabled per");
 	}
 
 	//========================================================AUTONOMOUS=======================================
@@ -772,8 +772,8 @@ private:
 	void TeleopPeriodic(void)
 	{
 		operateShifter();
-		simpleShoot();
-		//advancedShoot();
+		//simpleShoot();
+		advancedShoot();
 		//pusher();
 		//simpleIntake();
 		//SubtractionFilter();
