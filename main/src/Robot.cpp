@@ -440,6 +440,7 @@ private:
 #define AUTO_AIM_POS_4 -5
 #define AUTO_AIM_POS_5 -20
 #define AUTO_SHOOTER_POS SHOOT_FAR+40
+#define ROLLER_SPEED -0.6
 
 		if(stateTimer->Get() > autoDelay)
 		{
@@ -538,7 +539,7 @@ private:
 					m_shootR->Set(true);
 
 					autoIntake(PICKUP);
-					m_intakeRoller->SetSpeed(0.6);
+					m_intakeRoller->SetSpeed(ROLLER_SPEED);
 
 					if(timer->Get() == 1.0)
 					{
@@ -601,7 +602,7 @@ private:
 					autoIntake(INTAKE_SHOOT_FAR);
 					shooter1->Set(0.f);
 					shooter2->Set(0.f);
-					m_intakeRoller->SetSpeed(-1);
+					m_intakeRoller->SetSpeed(-ROLLER_SPEED);
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
@@ -718,7 +719,7 @@ private:
 						autoIntake(TRANSFER);
 						shooter1->Set(0.f);
 						shooter2->Set(0.f);
-						m_intakeRoller->SetSpeed(-0.6);
+						m_intakeRoller->SetSpeed(-ROLLER_SPEED);
 						m_shootE->Set(false);
 						m_shootR->Set(true);
 						//m_shooterServo->SetAngle(SERVO_IN);
@@ -857,9 +858,9 @@ private:
 		printf("Shooter State: %d\n", shooterState);
 		//printf("gamepad dY: %d\n", m_Gamepad->GetPOV(0));
 		if(m_Gamepad->GetRawButton(GP_L) && shooterState != 50)
-			m_intakeRoller->SetSpeed(0.6);
+			m_intakeRoller->SetSpeed(ROLLER_SPEED);
 		else if(m_Gamepad->GetRawButton(GP_R) && shooterState != 50)
-			m_intakeRoller->SetSpeed(-0.6);
+			m_intakeRoller->SetSpeed(-ROLLER_SPEED);
 		else
 			m_intakeRoller->SetSpeed(0);
 
@@ -1031,7 +1032,7 @@ private:
 
 
 			autoIntake(TRANSFER);
-			m_intakeRoller->SetSpeed(-0.6);
+			m_intakeRoller->SetSpeed(-ROLLER_SPEED);
 
 			if(timer->Get() > 0.75)
 			{
