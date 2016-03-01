@@ -33,7 +33,7 @@ typedef long long int Int64;
 #define TRANSFER 0
 #define HOME_SHOOTER 0
 #define HOME_INTAKE 0
-#define SPEED_RPM 1500
+#define SPEED_RPM 1000
 #define SHOOTER_SPEED_CHECK 20000
 
 class Robot: public IterativeRobot
@@ -174,7 +174,7 @@ private:
 		turnPID->setMinDoneCycles(1);
 		turnPID->setMaxOutput(0.3);
 
-		shooterPID = new SimPID(0.002, 0, 0.001, 10);
+		shooterPID = new SimPID(0.0015, 0, 0.001, 10);
 		shooterPID->setMaxOutput(0.4);
 
 		intakePID = new SimPID(0.001, 0, 0.001, 10);
@@ -207,6 +207,8 @@ private:
 
 		timer = new Timer();
 		timer->Reset();
+		stateTimer = new Timer();
+		stateTimer->Reset();
 
 		VisionInit();
 
@@ -333,7 +335,7 @@ private:
 		alpha = raw_pixel + 3;
 
 		//misc set up
-		colourTable = {255,255,255,255};
+		colourTable = {255,255,255,0};
 		picture_ID = 0;
 		last_turn = 0;
 		aim_loop_counter = 0;
@@ -363,6 +365,7 @@ private:
 	void DisabledInit()
 	{
 		IMAQdxStopAcquisition(session);
+		stateTimer->Stop();
 		m_LED->Set(Relay::kOff);
 	}
 
@@ -423,6 +426,7 @@ private:
 			shooter1->Set(0.f);
 			shooter2->Set(0.f);
 			timer->Start();
+			//stateTimer->Reset();
 			stateTimer->Start();
 			IMAQdxStartAcquisition(session);
 			m_LED->Set(Relay::kForward);
@@ -730,7 +734,7 @@ private:
 						shooter1->Set(SPEED_RPM);
 						shooter2->Set(-SPEED_RPM);
 						m_intakeRoller->SetSpeed(0.f);
-						autoShooter(SHOOT_FAR);
+						autoShooter(findShooterAngle());
 						autoIntake(INTAKE_SHOOT_FAR);
 						m_shootE->Set(false);
 						m_shootR->Set(true);
@@ -744,7 +748,7 @@ private:
 					case 5: //shoot the ball
 						shooter1->Set(SPEED_RPM);
 						shooter2->Set(-SPEED_RPM);
-						autoShooter(SHOOT_FAR);
+						autoShooter(findShooterAngle());
 						autoIntake(INTAKE_SHOOT_FAR);
 						m_shootE->Set(true);
 						m_shootR->Set(false);
@@ -1084,7 +1088,7 @@ private:
 			break;
 
 		case 70: //prep shooter for shot
-			autoShooter(findShooterAngle());
+			autoShooter(SHOOT_FAR);
 			shooter1->Set(-SPEED_RPM);
 			shooter2->Set(SPEED_RPM);
 			m_shootE->Set(false);
@@ -1094,8 +1098,9 @@ private:
 			autoIntake(INTAKE_SHOOT_FAR);
 			//m_intakeRoller->SetSpeed(0.f);
 
-			printf("shooter Speed: %d\t%d\terror: %d\t%d\n", shooter1->GetEncVel(), shooter2->GetEncVel(), shooter1->GetClosedLoopError(), shooter2->GetClosedLoopError());
+			//printf("shooter Speed: %d\t%d\terror: %d\t%d\n", shooter1->GetEncVel(), shooter2->GetEncVel(), shooter1->GetClosedLoopError(), shooter2->GetClosedLoopError());
 			//cylinder = retract|shooter = out|angle = shoot
+			printf("s1: %f\ts2: %f\n", shooter1->GetOutputVoltage(), shooter2->GetOutputVoltage());
 
 			if(m_Gamepad->GetRawButton(GP_B))
 			{
@@ -1129,7 +1134,7 @@ private:
 			autoIntake(INTAKE_SHOOT_FAR);
 			//m_intakeRoller->SetSpeed(0.f);
 
-			printf("shooter Speed: %d\t%d\terror: %d\t%d\n", shooter1->GetEncVel(), shooter2->GetEncVel(), shooter1->GetClosedLoopError(), shooter2->GetClosedLoopError());
+			//printf("shooter Speed: %d\t%d\terror: %d\t%d\n", shooter1->GetEncVel(), shooter2->GetEncVel(), shooter1->GetClosedLoopError(), shooter2->GetClosedLoopError());
 
 			if(m_Gamepad->GetRawButton(GP_B))
 			{
@@ -1515,7 +1520,7 @@ private:
 	}
 
 	//===============================================VISION FUNCTIONS=============================================
-#define AIM_CORRECTION 30
+#define AIM_CORRECTION 40
 #define AIM_FILTER 1
 #define AIM_LOOP_WAIT 5
 #define AIM_TIMEOUT 2
@@ -1601,6 +1606,12 @@ private:
 			//filter image for blob finding
 			BinaryFilter();
 
+			if(m_Joystick->GetRawButton(12)){
+				sprintf(filename, "/home/lvuser/pic%d.bmp", picture_ID);
+				DriverStation::ReportError("writing picture to file\n");
+				imaqWriteBMPFile(frame, filename, 30, &colourTable);
+			}
+
 			//find filtered blobs
 			imaqParticleFilter4(particle, processed, filterCriteria, CRITERIA_COUNT, &filterOptions, NULL, &num_particlesFound);
 
@@ -1636,11 +1647,7 @@ private:
 			else
 				CameraServer::GetInstance()->SetImage(processed);
 
-			if(m_Joystick->GetRawButton(12)){
-				sprintf(filename, "/home/lvuser/pic%d.bmp", picture_ID);
-				DriverStation::ReportError("writing picture to file\n");
-				imaqWriteBMPFile(processed, filename, 30, &colourTable);
-			}
+
 			return 0;
 		}
 		// unable to take picture, return error
@@ -1691,8 +1698,8 @@ private:
 		printf("width: %d\tleft: %d\tarea: %d\tperimeter: %d\theight: %d\n", (int)width, (int)left, (int)area, (int)perimeter, (int)height);
 	}
 
-#define R_THRESHOLD 90
-#define G_THRESHOLD 100
+#define R_THRESHOLD 100
+#define G_THRESHOLD 110
 #define B_THRESHOLD 90
 	inline void BinaryFilter(void){
 		for (int i = 0; i < (RES_X*RES_Y); i++){
@@ -1744,7 +1751,7 @@ private:
 	//=============================================MATHY FUNCTIONS=======================================
 #define SLOPE -0.0779f
 #define INTERCEPT 43.699f
-#define SHOOTER_TRIM 0.f
+#define SHOOTER_TRIM 12.f
 	inline int findShooterAngle()
 	{
 		return (SLOPE*target_y + INTERCEPT + SHOOTER_TRIM)*(4096.f/360.f);
