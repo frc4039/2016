@@ -408,7 +408,7 @@ private:
 
 
 
-		printf("shooterA: %d\tintakeA: %d\n", m_shooter->GetEncPosition(), m_intake->GetEncPosition());
+		//printf("shooterA: %d\tintakeA: %d\n", m_shooter->GetEncPosition(), m_intake->GetEncPosition());
 		//printf("shooterA: %f\tintakeA: %f\n", m_shooter->GetPosition(), m_intake->GetPosition());
 
 	}
@@ -795,14 +795,14 @@ private:
 		//if (m_Joystick->GetRawButton(10))
 			//aimsAtTarget();
 		if(shooterState != 90){
-			//FindTargetCenter();
+			FindTargetCenter();
 			teleDrive();
 		}
 		//tempIntake();
 
 
 		//lw->Run();
-		printf("Robot tele periodic");
+		//printf("Robot tele periodic");
 	}
 
 	//==========================================================USER FUNCTIONS=================================
@@ -855,7 +855,7 @@ private:
 	}
 	void advancedShoot(void)
 	{
-		printf("Shooter State: %d\n", shooterState);
+		//printf("Shooter State: %d\n", shooterState);
 		//printf("gamepad dY: %d\n", m_Gamepad->GetPOV(0));
 		if(m_Gamepad->GetRawButton(GP_L) && shooterState != 50)
 			m_intakeRoller->SetSpeed(ROLLER_SPEED);
@@ -1136,7 +1136,7 @@ private:
 				timer->Start();
 				shooterState = 10;
 			}
-			else if(m_Gamepad->GetRawButton(GP_X) && timer->Get() > 2.0 )//&& (shooter1->GetEncVel() < -SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK) )
+			else if(m_Gamepad->GetRawButton(GP_X) && timer->Get() > 1.0 )//&& (shooter1->GetEncVel() < -SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK) )
 			{
 				timer->Reset();
 				timer->Start();
@@ -1147,7 +1147,7 @@ private:
 
 		case 80: //shoot from shoot_far position
 			printf("Shooting...");
-			autoShooter(findShooterAngle());
+			autoShooter(SHOOT_FAR);
 			shooter1->Set(-SPEED_RPM);
 			shooter2->Set(SPEED_RPM);
 			m_shootE->Set(true);
@@ -1467,7 +1467,7 @@ private:
 
 		m_shooter->Set(-rotate);
 
-		printf("shooter rotate power: %f \t error: %d \t target: %d \n", rotate, currentTicks - ticks, ticks);
+		//printf("shooter rotate power: %f \t error: %d \t target: %d \n", rotate, currentTicks - ticks, ticks);
 
 		return shooterPID->isDone();
 	}
@@ -1483,7 +1483,7 @@ private:
 
 			m_intake->Set(-rotate);
 
-			printf("intake rotate power: %f \t error: %d \t target: %d \n", rotate, currentTicks - ticks, ticks);
+			//printf("intake rotate power: %f \t error: %d \t target: %d \n", rotate, currentTicks - ticks, ticks);
 
 			return intakePID->isDone();
 		}
@@ -1618,7 +1618,7 @@ private:
 				imaqMeasureParticle(particle, blob, FALSE, IMAQ_MT_BOUNDING_RECT_WIDTH, &rect_width);
 				imaqMeasureParticle(particle, blob, FALSE, IMAQ_MT_BOUNDING_RECT_TOP, &target_y);
 
-				showBlobMeasurements();
+				//showBlobMeasurements();
 
 				//find center based on width
 				centerx = rect_left + (rect_width/2);
@@ -1668,7 +1668,7 @@ private:
 				maxAreaIndex = i;
 			}
 		}
-		printf("picking blob %d\n", (int)maxAreaIndex);
+		//printf("picking blob %d\n", (int)maxAreaIndex);
 		return (int)maxAreaIndex;
 	}
 	void showBlobMeasurements(void){
