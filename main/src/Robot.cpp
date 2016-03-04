@@ -28,7 +28,7 @@ typedef long long int Int64;
 #define SHOOT_LOWBAR 390
 #define SHOOT_FAR 400
 #define SHOOT_CLOSE 550
-#define INTAKE_SHOOT_FAR 475
+#define INTAKE_SHOOT_FAR 550
 #define INTAKE_SHOOT_CLOSE 475
 #define TRANSFER 0
 #define HOME_SHOOTER 0
@@ -171,8 +171,8 @@ private:
 		turnPID->setMinDoneCycles(1);
 		turnPID->setMaxOutput(0.3);
 
-		shooterPID = new SimPID(0.0015, 0, 0.001, 10);
-		shooterPID->setMaxOutput(0.4);
+		shooterPID = new SimPID(0.0013, 0, 0.002, 10);
+		shooterPID->setMaxOutput(0.3);
 
 		intakePID = new SimPID(0.001, 0, 0.001, 10);
 		intakePID->setMaxOutput(0.4);
@@ -1625,7 +1625,7 @@ private:
 	}
 
 	//===============================================VISION FUNCTIONS=============================================
-#define AIM_CORRECTION 40
+#define AIM_CORRECTION 30
 #define AIM_FILTER 1
 #define AIM_LOOP_WAIT 5
 #define AIM_TIMEOUT 2
@@ -1857,11 +1857,11 @@ private:
 
 	//=============================================MATHY FUNCTIONS=======================================
 #define SLOPE -0.0779f
-#define INTERCEPT 43.699f
-#define SHOOTER_TRIM 20.f
+#define INTERCEPT 58.699f
+#define SHOOTER_TRIM 5.f
 	inline int findShooterAngle()
 	{
-		int angle =  (SLOPE*target_y + INTERCEPT + SHOOTER_TRIM)*(4096.f/360.f);
+		int angle = (SLOPE*target_y + INTERCEPT + SHOOTER_TRIM)*(4096.f/360.f);
 		printf("auto shooter angle: %d\n", angle);
 		return angle;
 	}
