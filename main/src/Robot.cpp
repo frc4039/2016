@@ -33,7 +33,7 @@ typedef long long int Int64;
 #define TRANSFER 0
 #define HOME_SHOOTER 0
 #define HOME_INTAKE 0
-#define SPEED_RPM 1000
+#define SPEED_RPM 7000
 #define SHOOTER_SPEED_CHECK 20000
 
 class Robot: public IterativeRobot
@@ -77,7 +77,6 @@ private:
 	DigitalInput *m_shooterHomeSwitch;
 	DigitalInput *m_intakeHomeSwitch;
 	DigitalInput *m_pusherHomeSwitch;
-	DigitalInput *m_intakeHomeSwitch;
 
 	Encoder *m_leftDriveEncoder;
 	Encoder *m_rightDriveEncoder;
@@ -145,7 +144,7 @@ private:
 		shooter1->SetControlMode(CANTalon::kSpeed);
 		shooter1->SetCloseLoopRampRate(0);
 		shooter1->ConfigEncoderCodesPerRev(4096);
-		shooter1->SetPID(0.1, 0, 0.01, 0);
+		shooter1->SetPID(0.08, 0, 2, 0);
 		shooter1->SelectProfileSlot(0);
 		// shooter1->SetSensorDirection(true);
 		shooter1->SetAllowableClosedLoopErr(1000);
@@ -155,7 +154,7 @@ private:
 		shooter2->SetControlMode(CANTalon::kSpeed);
 		shooter2->SetCloseLoopRampRate(0);
 		shooter2->ConfigEncoderCodesPerRev(4096);
-		shooter2->SetPID(0.1, 0, 0.01, 0);
+		shooter2->SetPID(0.08, 0, 2, 0);
 		shooter2->SelectProfileSlot(0);
 		// shooter2->SetSensorDirection(false);
 		shooter2->SetAllowableClosedLoopErr(1000);
@@ -605,7 +604,8 @@ private:
 					m_intakeRoller->SetSpeed(0.f);
 					m_shootE->Set(false);
 					m_shootR->Set(true);
-				case 2: //transfer ball, aim at tower roughly
+					break;
+				case 3: //transfer ball, aim at tower roughly
 					autoShooter(AUTO_SHOOTER_POS);
 					autoIntake(INTAKE_SHOOT_FAR);
 					shooter1->Set(0.f);
@@ -636,7 +636,7 @@ private:
 						timer->Start();
 					}
 					break;
-				case 3: //prep ball, confirm aim with vision
+				case 4: //prep ball, confirm aim with vision
 					shooter1->Set(SPEED_RPM);
 					shooter2->Set(-SPEED_RPM);
 					autoShooter(findShooterAngle());
@@ -651,7 +651,7 @@ private:
 						timer->Start();
 					}
 					break;
-				case 4: //shoot the ball
+				case 5: //shoot the ball
 					shooter1->Set(SPEED_RPM);
 					shooter2->Set(-SPEED_RPM);
 					autoShooter(findShooterAngle());
@@ -667,7 +667,7 @@ private:
 						timer->Reset();
 					}
 					break;
-				case 5: //turn off shooter
+				case 6: //turn off shooter
 					shooter1->Set(0.f);
 					shooter2->Set(0.f);
 					autoShooter(HOME_SHOOTER);
@@ -1204,7 +1204,7 @@ private:
 			autoIntake(INTAKE_SHOOT_FAR);
 			//m_intakeRoller->SetSpeed(0.f);
 
-			//printf("shooter Speed: %d\t%d\terror: %d\t%d\n", shooter1->GetEncVel(), shooter2->GetEncVel(), shooter1->GetClosedLoopError(), shooter2->GetClosedLoopError());
+			printf("shooter Speed: %d\t%d\terror: %d\t%d\n", shooter1->GetEncVel(), shooter2->GetEncVel(), shooter1->GetClosedLoopError(), shooter2->GetClosedLoopError());
 			//cylinder = retract|shooter = out|angle = shoot
 			printf("s1: %f\ts2: %f\n", shooter1->GetOutputVoltage(), shooter2->GetOutputVoltage());
 
@@ -1322,7 +1322,6 @@ private:
 				timer->Reset();
 				shooterState = 89;
 			}
-			autoShooter(findShooterAngle());
 			break;
 		}
 	}
@@ -1659,10 +1658,12 @@ private:
 			//SmartDashboard::PutNumber("Motor Output", turn);
 		}
 
+		/*
 		if (target_y < CLOSE_LIMIT)
 			autoShooter(SHOOT_CLOSE);
 		else
 			autoShooter(SHOOT_FAR);
+		*/
 
 		//if image hasn't been found in a while then stop moving
 		if (aim_loop_counter - AIM_LOOP_WAIT >= AIM_TIMEOUT){
@@ -1857,10 +1858,12 @@ private:
 	//=============================================MATHY FUNCTIONS=======================================
 #define SLOPE -0.0779f
 #define INTERCEPT 43.699f
-#define SHOOTER_TRIM 12.f
+#define SHOOTER_TRIM 20.f
 	inline int findShooterAngle()
 	{
-		return (SLOPE*target_y + INTERCEPT + SHOOTER_TRIM)*(4096.f/360.f);
+		int angle =  (SLOPE*target_y + INTERCEPT + SHOOTER_TRIM)*(4096.f/360.f);
+		printf("auto shooter angle: %d\n", angle);
+		return angle;
 	}
 
 	inline float expo(float x, int n)
