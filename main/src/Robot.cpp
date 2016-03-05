@@ -202,7 +202,7 @@ private:
 		m_intakeHomeSwitch = new DigitalInput(0);
 
 		m_leftDriveEncoder = new Encoder(4, 5);
-		m_rightDriveEncoder = new Encoder(3, 2);
+		m_rightDriveEncoder = new Encoder(7,6);
 
 		m_shooter = new CANTalon(2);
 		m_shooter->SetFeedbackDevice(CANTalon::QuadEncoder);
