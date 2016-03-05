@@ -47,13 +47,13 @@ typedef long long int Int64;
 #define CLOSE_LIMIT 220
 #define IMAGE_CENTER 320
 
-#define R_THRESHOLD 130
-#define G_THRESHOLD 90
-#define B_THRESHOLD 130
+#define R_THRESHOLD 200
+#define G_THRESHOLD 100
+#define B_THRESHOLD 200
 
 #define SLOPE -0.0779f
 #define INTERCEPT 58.699f
-#define SHOOTER_TRIM 7.f
+#define SHOOTER_TRIM 1.f
 
 #define TRIM_MODE
 
@@ -92,6 +92,7 @@ private:
 	Joystick *m_Joystick;
 
 	Timer *timer;
+	Timer *trimTimer;
 	Timer *stateTimer;
 	double last_time;
 
@@ -192,13 +193,13 @@ private:
 		turnPID->setMinDoneCycles(1);
 		turnPID->setMaxOutput(0.3);
 
-		shooterPID = new SimPID(0.0012, 0, 0.003, 10);
-		shooterPID->setMaxOutput(0.3);
+		shooterPID = new SimPID(0.0017, 0, 0.0005, 10);
+		shooterPID->setMaxOutput(0.25);
 
 		intakePID = new SimPID(0.001, 0, 0.001, 10);
 		intakePID->setMaxOutput(0.4);
 
-		visionPID = new SimPID(0.007, 0.02, 0.001, 5);
+		visionPID = new SimPID(0.01, 0.02, 0.001, 5);
 		visionPID->setMaxOutput(0.5);
 		visionPID->setMinDoneCycles(20);
 
@@ -225,6 +226,8 @@ private:
 		timer->Reset();
 		stateTimer = new Timer();
 		stateTimer->Reset();
+		trimTimer = new Timer();
+		trimTimer->Reset();
 
 		VisionInit();
 
@@ -233,6 +236,7 @@ private:
 		autoMode = 0;
 		autoPosition = 0;
 		pusherState = 0;
+		aim_fly_trim = 0;
 	}
 
 #define EXPOSURE (Int64)10
@@ -907,6 +911,7 @@ private:
 	void TeleopInit(void)
 	{
 		IMAQdxStartAcquisition(session);
+		trimTimer->Start();
 		if(m_Joystick->GetRawButton(9))
 			m_shooter->SetPosition(0);
 		m_LED->Set(Relay::kForward);
@@ -941,8 +946,8 @@ private:
 #define PRACTICE_DRIVE_LIMIT 1
 	inline void teleDrive(void)
 	{
-		leftSpeed = scale(limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT);
-		rightSpeed = scale(-limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT);
+		leftSpeed = scale(limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) - scale(m_Gamepad->GetRawAxis(0), 0.3);
+		rightSpeed = scale(-limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) - scale(m_Gamepad->GetRawAxis(0), 0.3);
 
 		//printf("Joystick x=%f, y=%f\n", x,y);
 		m_leftDrive4->SetSpeed(leftSpeed);
@@ -1599,7 +1604,7 @@ private:
 
 		m_shooter->Set(-rotate);
 
-		//printf("shooter rotate power: %f \t error: %d \t target: %d \n", rotate, currentTicks - ticks, ticks);
+		printf("shooter rotate power: %f \t error: %d \t target: %d \n", rotate, currentTicks - ticks, ticks);
 
 		return shooterPID->isDone();
 	}
@@ -1649,6 +1654,7 @@ private:
 	//===============================================VISION FUNCTIONS=============================================
 
 	int aim_loop_counter;
+	float aim_fly_trim;
 
 	int aimAtTarget(void){
 		float turn = last_turn;
@@ -1667,7 +1673,7 @@ private:
 				last_turn = turn;
 				aim_loop_counter = 0;
 			}
-			printf("im_error: %d\tcenter: %f\terror: %f\tturn: %f\n", image_error, centerx, error, turn);
+			//printf("im_error: %d\tcenter: %f\terror: %f\tturn: %f\n", image_error, centerx, error, turn);
 
 			//SmartDashboard::PutNumber("Aim Error", IMAGE_CENTER + AIM_CORRECTION - x_pixel);
 			//SmartDashboard::PutNumber("Motor Output", turn);
@@ -1689,6 +1695,17 @@ private:
 
 		humanAdjust = scale(m_Gamepad->GetRawAxis(0), 0.3);
 		turn -= humanAdjust;
+
+		if (m_Joystick->GetRawButton(7) && trimTimer->Get() > 0.5){
+			trimTimer->Reset();
+			aim_fly_trim += 1.0f;
+			printf("\t\taim trim: %f\n", aim_fly_trim);
+		}
+		else if (m_Joystick->GetRawButton(8) && trimTimer->Get() > 0.5){
+			trimTimer->Reset();
+			aim_fly_trim -= 1.0f;
+			printf("\t\taim trim: %f\n", aim_fly_trim);
+		}
 
 
 		if(error < AIM_FINE_LIMIT && error > -AIM_FINE_LIMIT){
@@ -1878,7 +1895,7 @@ private:
 
 	inline int findShooterAngle()
 	{
-		int angle = (SLOPE*target_y + INTERCEPT + SHOOTER_TRIM)*(4096.f/360.f);
+		int angle = (SLOPE*target_y + INTERCEPT + SHOOTER_TRIM + aim_fly_trim)*(4096.f/360.f);
 		printf("auto shooter angle: %d\n", angle);
 		return angle;
 	}
