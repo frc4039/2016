@@ -36,6 +36,23 @@ typedef long long int Int64;
 #define SPEED_RPM 7000
 #define SHOOTER_SPEED_CHECK 20000
 
+//vision
+#define AIM_CORRECTION 50
+#define AIM_FILTER 1
+#define AIM_LOOP_WAIT 5
+#define AIM_TIMEOUT 2
+#define AIM_FINE_LIMIT 20
+#define CLOSE_LIMIT 220
+#define IMAGE_CENTER 320
+
+#define R_THRESHOLD 100
+#define G_THRESHOLD 110
+#define B_THRESHOLD 90
+
+#define SLOPE -0.0779f
+#define INTERCEPT 58.699f
+#define SHOOTER_TRIM 3.f
+
 class Robot: public IterativeRobot
 {
 private:
@@ -1625,14 +1642,7 @@ private:
 	}
 
 	//===============================================VISION FUNCTIONS=============================================
-#define AIM_CORRECTION 30
-#define AIM_FILTER 1
-#define AIM_LOOP_WAIT 5
-#define AIM_TIMEOUT 2
-#define AIM_FINE_LIMIT 20
-#define CLOSE_LIMIT 220
 
-#define IMAGE_CENTER 320
 	int aim_loop_counter;
 
 	int aimAtTarget(void){
@@ -1805,9 +1815,7 @@ private:
 		printf("width: %d\tleft: %d\tarea: %d\tperimeter: %d\theight: %d\n", (int)width, (int)left, (int)area, (int)perimeter, (int)height);
 	}
 
-#define R_THRESHOLD 100
-#define G_THRESHOLD 110
-#define B_THRESHOLD 90
+
 	inline void BinaryFilter(void){
 		for (int i = 0; i < (RES_X*RES_Y); i++){
 			/*
@@ -1856,9 +1864,7 @@ private:
 	}
 
 	//=============================================MATHY FUNCTIONS=======================================
-#define SLOPE -0.0779f
-#define INTERCEPT 58.699f
-#define SHOOTER_TRIM 5.f
+
 	inline int findShooterAngle()
 	{
 		int angle = (SLOPE*target_y + INTERCEPT + SHOOTER_TRIM)*(4096.f/360.f);
