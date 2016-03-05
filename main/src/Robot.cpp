@@ -1,3 +1,5 @@
+//march 5th mostly working
+
 #include "WPILib.h"
 #include "NIIMAQdx.h"
 #include <math.h>
@@ -24,7 +26,7 @@ typedef long long int Int64;
 #define SERVO_OUT 45
 
 #define SHOOT_SPEED 0.8225f
-#define PICKUP 1720
+#define PICKUP 1770
 #define SHOOT_LOWBAR 390
 #define SHOOT_FAR 400
 #define SHOOT_CLOSE 550
@@ -37,7 +39,7 @@ typedef long long int Int64;
 #define SHOOTER_SPEED_CHECK 20000
 
 //vision
-#define AIM_CORRECTION 50
+#define AIM_CORRECTION 35
 #define AIM_FILTER 1
 #define AIM_LOOP_WAIT 5
 #define AIM_TIMEOUT 2
@@ -45,13 +47,15 @@ typedef long long int Int64;
 #define CLOSE_LIMIT 220
 #define IMAGE_CENTER 320
 
-#define R_THRESHOLD 100
-#define G_THRESHOLD 110
-#define B_THRESHOLD 90
+#define R_THRESHOLD 130
+#define G_THRESHOLD 90
+#define B_THRESHOLD 130
 
 #define SLOPE -0.0779f
 #define INTERCEPT 58.699f
-#define SHOOTER_TRIM 3.f
+#define SHOOTER_TRIM 7.f
+
+#define TRIM_MODE
 
 class Robot: public IterativeRobot
 {
@@ -188,15 +192,15 @@ private:
 		turnPID->setMinDoneCycles(1);
 		turnPID->setMaxOutput(0.3);
 
-		shooterPID = new SimPID(0.0013, 0, 0.002, 10);
+		shooterPID = new SimPID(0.0012, 0, 0.003, 10);
 		shooterPID->setMaxOutput(0.3);
 
 		intakePID = new SimPID(0.001, 0, 0.001, 10);
 		intakePID->setMaxOutput(0.4);
 
-		visionPID = new SimPID(0.00675, 0.02, 0.001, 5);
-		visionPID->setMaxOutput(0.4);
-		visionPID->setMinDoneCycles(10);
+		visionPID = new SimPID(0.007, 0.02, 0.001, 5);
+		visionPID->setMaxOutput(0.5);
+		visionPID->setMinDoneCycles(20);
 
 		m_shooterHomeSwitch = new DigitalInput(1);
 		m_intakeHomeSwitch = new DigitalInput(0);
@@ -1332,6 +1336,7 @@ private:
 			break;
 		case 90: //vision
 			autoShooter(findShooterAngle());
+			autoIntake(INTAKE_SHOOT_FAR);
 			if(!m_Gamepad->GetRawButton(GP_A))
 				shooterState = 70;
 			if(aimAtTarget() == 1 && timer->Get() > 0.5 ){//&& (shooter1->GetEncVel() < -SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK)){//goal object detected
@@ -1736,7 +1741,11 @@ private:
 			if (num_particlesFound == 0){
 				//unable to find target
 				DriverStation::ReportError("ERROR! Target not found!\n");
-				CameraServer::GetInstance()->SetImage(frame);
+				imaqDrawShapeOnImage(frame, frame, {0, IMAGE_CENTER+AIM_CORRECTION, RES_Y-1, 1}, IMAQ_DRAW_VALUE, IMAQ_SHAPE_RECT, 0.0f);
+				if (m_Joystick->GetRawButton(11))
+					CameraServer::GetInstance()->SetImage(processed);
+				else
+					CameraServer::GetInstance()->SetImage(frame);
 				return -3;
 			}
 			else if (num_particlesFound > 0){
@@ -1827,11 +1836,13 @@ private:
 			//if it has lots of red
 			if ((R[i*4] > R_THRESHOLD)){
 				proc_pixel[i] = 0;
+				//printf("%d too red\n", i);
 			}
 			//blue without green
 			else if (((B[i*4] > B_THRESHOLD) && (G[i*4] < G_THRESHOLD))){
 				//printf("eliminating pixel BG: %d, %d\n", B[i*4], G[i*4]);
 				proc_pixel[i] = 0;
+				//printf("%d too blue no green", i);
 			}
 			//if lots of green
 			else if ((G[i*4] > G_THRESHOLD)){

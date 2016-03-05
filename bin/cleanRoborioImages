@@ -1,0 +1,8 @@
+#!/bin/bash
+
+echo cleaning roborio images...
+
+if ssh -o ConnectTimeout=5 admin@10.40.39.2 rm /home/lvuser/pic*.bmp
+then
+	echo complete.
+fi
