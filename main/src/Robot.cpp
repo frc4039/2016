@@ -193,11 +193,11 @@ private:
 		turnPID->setMinDoneCycles(1);
 		turnPID->setMaxOutput(0.3);
 
-		shooterPID = new SimPID(0.0017, 0, 0.0005, 10);
+		shooterPID = new SimPID(0.00175, 0, 0.0005, 10);
 		shooterPID->setMaxOutput(0.25);
 
 		intakePID = new SimPID(0.001, 0, 0.001, 10);
-		intakePID->setMaxOutput(0.4);
+		intakePID->setMaxOutput(0.5);
 
 		visionPID = new SimPID(0.01, 0.02, 0.001, 5);
 		visionPID->setMaxOutput(0.5);
@@ -946,8 +946,8 @@ private:
 #define PRACTICE_DRIVE_LIMIT 1
 	inline void teleDrive(void)
 	{
-		leftSpeed = scale(limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) - scale(m_Gamepad->GetRawAxis(0), 0.3);
-		rightSpeed = scale(-limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) - scale(m_Gamepad->GetRawAxis(0), 0.3);
+		leftSpeed = scale(limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) - scale(m_Gamepad->GetRawAxis(0), 0.5);
+		rightSpeed = scale(-limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) - scale(m_Gamepad->GetRawAxis(0), 0.5);
 
 		//printf("Joystick x=%f, y=%f\n", x,y);
 		m_leftDrive4->SetSpeed(leftSpeed);
@@ -1693,7 +1693,7 @@ private:
 
 		aim_loop_counter++;
 
-		humanAdjust = scale(m_Gamepad->GetRawAxis(0), 0.3);
+		humanAdjust = scale(m_Gamepad->GetRawAxis(0), 0.5);
 		turn -= humanAdjust;
 
 		if (m_Joystick->GetRawButton(7) && trimTimer->Get() > 0.5){
