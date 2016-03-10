@@ -1660,7 +1660,6 @@ private:
 	{
 		operateShifter();
 		advancedShoot();
-		teleDriveAlt();
 		//simpleShoot();
 		//pusher();
 		//simpleIntake();
@@ -1686,8 +1685,8 @@ private:
 #define PRACTICE_DRIVE_LIMIT 1
 	inline void teleDrive(void)
 	{
-		leftSpeed = scale(limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) - scale(m_Gamepad->GetRawAxis(0), 0.5);
-		rightSpeed = scale(-limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) - scale(m_Gamepad->GetRawAxis(0), 0.5);
+		leftSpeed = scale(limit(expo(m_Joystick->GetY(), 2), 1) + scale(m_Gamepad->GetRawAxis(1), 0.5) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) - scale(m_Gamepad->GetRawAxis(0), 0.5);
+		rightSpeed = scale(-limit(expo(m_Joystick->GetY(), 2), 1) + scale(-m_Gamepad->GetRawAxis(1), 0.5) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) - scale(m_Gamepad->GetRawAxis(0), 0.5);
 
 		//printf("Joystick x=%f, y=%f\n", x,y);
 		m_leftDrive4->SetSpeed(leftSpeed);
@@ -1696,16 +1695,7 @@ private:
 		m_rightDrive3->SetSpeed(rightSpeed);
 	}
 
-	inline void teleDriveAlt(void)
-	{
-		leftSpeed = scale(m_Gamepad->GetRawAxis(1), 0.5) - scale(m_Gamepad->GetRawAxis(0), 0.5);
-		rightSpeed = scale(-m_Gamepad->GetRawAxis(1), 0.5) - scale(m_Gamepad->GetRawAxis(0), 0.5);
 
-		m_leftDrive4->SetSpeed(leftSpeed);
-		m_leftDrive1->SetSpeed(leftSpeed);
-		m_rightDrive2->SetSpeed(rightSpeed);
-		m_rightDrive3->SetSpeed(rightSpeed);
-	}
 	inline void operateShifter(void){
 		if(m_Joystick->GetRawButton(1)){
 			m_shiftHigh->Set(true);
