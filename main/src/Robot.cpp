@@ -1,6 +1,9 @@
 /**
  * Changelog: please comment your commit message
- * - LW
+
+ * - BTK
+ * March 10
+ * removed teledrivealt, added operator control to teledrive instead
  * March 10
  * Everything untested
  * Angle (roll) has to be between -10 and 10 in auto modes 3 and 4 to shoot (prevents misfire if robot caught up on defense)
