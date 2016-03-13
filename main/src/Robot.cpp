@@ -214,8 +214,8 @@ private:
 		m_LED = new Relay(0);
 
 		drivePID = new SimPID(0.0005 ,0, 0, 500);
-		drivePID->setMinDoneCycles(1);
-		drivePID->setMaxOutput(1.0);
+		drivePID->setMinDoneCycles(10);
+		drivePID->setMaxOutput(0.75);
 
 		turnPID = new SimPID(0.1, 0, 0, 2);
 		turnPID->setMinDoneCycles(1);
@@ -765,29 +765,15 @@ private:
 					}
 					if(result && timer->Get() > 1.5)
 					{
-						autoAimAngle = getAutoAimAngle();
-						if(autoPosition == 2)
-							{
-								timer->Reset();
-								timer->Start();
-								autoState = 6;
-							}
-						else if(autoPosition == 5)
-							{
-								timer->Reset();
-								timer->Start();
-								autoState = 8;
-							}
-						else
-							autoState++;
+						autoState = 10;
 						timer->Reset();
 						timer->Start();
 					}
 					break;
 				case 3: //prep ball 2, confirm aim with vision
 					shooter1->Set(-SPEED_RPM);
-					shooter2->Set(SPEED_RPM);
-					autoShooter(findShooterAngle());
+					shooter2->Set(SPEED_RPM - BALL_SPIN);
+					autoShooter(SHOOT_FAR);
 					autoIntake(INTAKE_SHOOT_FAR);
 					m_intakeRoller->SetSpeed(0.f);
 					m_shootE->Set(false);
@@ -801,8 +787,8 @@ private:
 					break;
 				case 4: //shoot the ball
 					shooter1->Set(-SPEED_RPM);
-					shooter2->Set(SPEED_RPM);
-					autoShooter(findShooterAngle());
+					shooter2->Set(SPEED_RPM - BALL_SPIN);
+					autoShooter(SHOOT_FAR);
 					autoIntake(INTAKE_SHOOT_FAR);
 					m_shootE->Set(true);
 					m_shootR->Set(false);
@@ -894,6 +880,29 @@ private:
 							timer->Reset();
 							autoState = 3;
 						}
+					break;
+
+				case 10: //wait a bit before taking picture
+					autoShooter(SHOOT_FAR);
+					if(timer->Get() > 0.5){
+						autoAimAngle = getAutoAimAngle();
+						if(autoPosition == 2)
+						{
+							timer->Reset();
+							timer->Start();
+							autoState = 6;
+						}
+						else if(autoPosition == 5)
+						{
+							timer->Reset();
+							timer->Start();
+							autoState = 8;
+						}
+						else
+							autoState = 3;
+						timer->Reset();
+						timer->Start();
+					}
 					break;
 				}
 				break;
