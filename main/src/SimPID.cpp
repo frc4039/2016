@@ -14,6 +14,7 @@ SimPID::SimPID(float p, float i, float d, int epsilon)
 	m_desiredValue = 0; // Default to 0, set later by the user
 	m_firstCycle = true;
 	m_maxOutput = 1.0; // Default to full range
+	m_minOutput = 0.0;
 	m_errorIncrement = 1;
 
 	m_cycleCount = 0;
@@ -78,6 +79,13 @@ void SimPID::setMaxOutput(float max)
 {	if(max >= 0.0 && max <= 1.0)
 	{
 		m_maxOutput = max;
+	}
+}
+
+void SimPID::setMinOutput(float min)
+{
+	if (min >= 0.0 && min <= 1.0){
+		m_minOutput = min;
 	}
 }
 
@@ -175,6 +183,18 @@ float SimPID::calcPID(int currentValue)
 		output = -m_maxOutput;
 	}
 	
+	if (output < m_minOutput && output > -m_minOutput){
+		if (output > 0)
+			output = m_minOutput;
+		else
+			output = -m_minOutput;
+	}
+
+	if (m_previousValue <= m_desiredValue + m_errorEpsilon
+				&& m_previousValue >= m_desiredValue - m_errorEpsilon
+				&& !m_firstCycle)
+		output = 0.0;
+
 	// Save the current value for next cycle's D calculation.
 	m_previousValue = currentValue;
 	

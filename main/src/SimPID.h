@@ -14,6 +14,7 @@ public:
 	void setErrorIncrement(int inc);
 	void setDesiredValue(int val);
 	void setMaxOutput(float max);
+	void setMinOutput(float min);
 	void resetErrorSum(void);
 		
 	float calcPID(int current);
@@ -34,6 +35,7 @@ private:
 	
 	bool m_firstCycle; // Flag for first cycle
 	float m_maxOutput; // Ceiling on calculation output
+	float m_minOutput; // floor on calculation output
 
 	int m_minCycleCount; // Minimum number of cycles in epsilon range to be done
 	int m_cycleCount; // Current number of cycles in epsilon range

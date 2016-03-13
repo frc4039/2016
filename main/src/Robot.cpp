@@ -52,11 +52,12 @@ typedef long long int Int64;
 #define TRANSFER 0
 #define HOME_SHOOTER 0
 #define HOME_INTAKE 0
-#define SPEED_RPM 7000
+#define SPEED_RPM 6500
+#define BALL_SPIN ((int)(SPEED_RPM*0.3))
 #define SHOOTER_SPEED_CHECK 20000
 
 //vision
-#define AIM_CORRECTION 45
+#define AIM_CORRECTION 30
 #define AIM_FILTER 1
 #define AIM_LOOP_WAIT 5
 #define AIM_TIMEOUT 2
@@ -66,11 +67,17 @@ typedef long long int Int64;
 
 #define R_THRESHOLD 200
 #define G_THRESHOLD 100
-#define B_THRESHOLD 200
+#define B_THRESHOLD 255
 
+//for vertical aim
 #define SLOPE -0.0779f
 #define INTERCEPT 58.699f
 #define SHOOTER_TRIM 1.f
+
+//fpr horizontal aim
+#define HFOV 0.449422282f
+#define PI 3.14159265f
+#define AUTO_AIM_CORRECTION 0.5
 
 #define TRIM_MODE
 
@@ -214,9 +221,10 @@ private:
 		turnPID->setMinDoneCycles(1);
 		turnPID->setMaxOutput(0.5);
 
-		turnPID2 = new SimPID(0.08,0,0.01,1);
+		turnPID2 = new SimPID(0.065,0,0.01,1);
 		turnPID2->setMinDoneCycles(10);
 		turnPID2->setMaxOutput(0.5);
+		turnPID2->setMinOutput(0.3);
 
 		shooterPID = new SimPID(0.00175, 0, 0.0005, 10);
 		shooterPID->setMaxOutput(0.25);
@@ -377,9 +385,9 @@ private:
 		//set up pixel pointers
 		raw_pixel = (char*)(raw_info.imageStart);
 		proc_pixel = (char*)(proc_info.imageStart);
-		R = raw_pixel;
+		B = raw_pixel;
 		G = raw_pixel + 1;
-		B = raw_pixel + 2;
+		R = raw_pixel + 2;
 		alpha = raw_pixel + 3;
 
 		//misc set up
@@ -1964,15 +1972,14 @@ private:
 				timer->Reset();
 			}
 			break;
-
 		case 70: //prep shooter for shot
 			autoShooter(SHOOT_FAR);
 			shooter1->Set(-SPEED_RPM);
-			shooter2->Set(SPEED_RPM);
+			shooter2->Set(SPEED_RPM - BALL_SPIN);
 			m_shootE->Set(false);
 			m_shootR->Set(true);
 
-
+			autoShooter(SHOOT_FAR);
 			autoIntake(INTAKE_SHOOT_FAR);
 			//m_intakeRoller->SetSpeed(0.f);
 
@@ -2032,7 +2039,7 @@ private:
 			//printf("Shooting...");
 			autoShooter(SHOOT_FAR);
 			shooter1->Set(-SPEED_RPM);
-			shooter2->Set(SPEED_RPM);
+			shooter2->Set(SPEED_RPM - BALL_SPIN);
 			m_shootE->Set(true);
 			m_shootR->Set(false);
 
@@ -2071,10 +2078,11 @@ private:
 			//printf("Shooting...");
 			autoShooter(findShooterAngle());
 			shooter1->Set(-SPEED_RPM);
-			shooter2->Set(SPEED_RPM);
+			shooter2->Set(SPEED_RPM - BALL_SPIN);
 			m_shootE->Set(true);
 			m_shootR->Set(false);
 
+			autoShooter(SHOOT_FAR);
 			autoIntake(INTAKE_SHOOT_FAR);
 			//m_intakeRoller->SetSpeed(0.f);
 
@@ -2087,6 +2095,8 @@ private:
 			break;
 		case 90: //vision
 			FindTargetCenter();
+			shooter1->Set(-SPEED_RPM);
+			shooter2->Set(SPEED_RPM - BALL_SPIN);
 			autoShooter(SHOOT_FAR);
 			autoIntake(INTAKE_SHOOT_FAR);
 			if(!m_Gamepad->GetRawButton(GP_A))
@@ -2403,14 +2413,13 @@ private:
 
 	int aim_loop_counter;
 	float aim_fly_trim;
-#define HFOV 0.449422282f
-#define PI 3.14159265f
-#define AUTO_AIM_CORRECTION -1
+
 	float getAutoAimAngle(){
 		int image_error;
 		image_error = FindTargetCenter();
+		//nav->Reset();
 		if (image_error == 0){
-			float angle = atan((centerx - (RES_X/2))*tan(HFOV)/(RES_X/2))*180/PI - atan(AIM_CORRECTION*tan(HFOV)/(RES_X/2))*180/PI;
+			float angle = atan((centerx - (RES_X/2) - AIM_CORRECTION)*tan(HFOV)/(RES_X/2))*180/PI + AUTO_AIM_CORRECTION;
 			printf("\t\tCalced angle from bot %f\n", angle);
 			return nav->GetYaw() + angle;
 		}
@@ -2622,6 +2631,15 @@ private:
 			if (y > 400)
 				printf("R, G, B: (%d, %d, %d), (%d, %d)\n", R[i*4], G[i*4], B[i*4], x, y);
 			*/
+
+			if ((G[i*4] > G_THRESHOLD)){
+				//printf("got green pixel: %d\n", G[i*4]);
+				proc_pixel[i] = 255;
+			}
+			else
+				proc_pixel[i] = 0;
+
+
 			//if it has lots of red
 			if ((R[i*4] > R_THRESHOLD)){
 				proc_pixel[i] = 0;
@@ -2632,14 +2650,8 @@ private:
 				//printf("eliminating pixel BG: %d, %d\n", B[i*4], G[i*4]);
 				proc_pixel[i] = 0;
 				//printf("%d too blue no green", i);
+
 			}
-			//if lots of green
-			else if ((G[i*4] > G_THRESHOLD)){
-				//printf("got green pixel: %d\n", G[i*4]);
-				proc_pixel[i] = 255;
-			}
-			else
-				proc_pixel[i] = 0;
 		}
 	}
 

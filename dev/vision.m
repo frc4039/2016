@@ -36,24 +36,27 @@ function vision
 % 	}
     %raw(1)
     %Binary Filter
-    R = 130;
-    G = 90;
-    B = 130;
+    R = 200;
+    G = 100;
+    B = 200;
     
     bin = linspace(L, W);
     test = linspace(L, W);
     for i = 1:L
         for j = 1:W
-            %put this part into the c++ code
-            if(raw(i,j,1) > R) 
-                pix = 0;
-            elseif (raw(i, j, 2) < G && raw(i, j, 3) > B)
-                pix = 0;
-            elseif (raw(i, j, 2) > G)
+            if (raw(i, j, 2) > G)
                 pix = 255;
             else
                 pix = 0;
             end
+            
+            if(raw(i,j,1) > R) 
+                pix = 0;
+            elseif (raw(i, j, 2) < G && raw(i, j, 3) > B)
+                pix = 0;
+            end
+            
+            
             
             bin(i,j) = pix;
         end
