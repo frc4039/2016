@@ -1,9 +1,13 @@
 /**
  * Changelog: please comment your commit message
+ * -CB
+ * March 14
+ * added expo to operator drive control for fine tuning while aiming
  * -BTK
  * March 13
  * Added butter shot
  * Fixed autos
+ * Tweaked shooter wheel speeds for more accurate shot
  * Option for gamepad driver control commented out
  * - LW
  * March 11
@@ -32,7 +36,6 @@ typedef long long int Int64;
 
 #define RES_X 640
 #define RES_Y 480
-//1548, 3334
 #define GP_UP 0
 #define GP_DOWN 180
 #define GP_A 1
@@ -60,6 +63,9 @@ typedef long long int Int64;
 #define BALL_SPIN ((int)(SPEED_RPM*0.3))
 #define SHOOTER_SPEED_CHECK 20000
 
+#define PRACTICE_DRIVE_LIMIT 1
+
+
 //vision
 #define AIM_CORRECTION 30
 #define AIM_FILTER 1
@@ -83,7 +89,6 @@ typedef long long int Int64;
 #define PI 3.14159265f
 #define AUTO_AIM_CORRECTION 0.5
 
-#define TRIM_MODE
 
 class Robot: public IterativeRobot
 {
@@ -439,8 +444,8 @@ private:
 		//if(m_shooterHomeSwitch->Get() == CLOSED)
 			//m_shooter->SetPosition(0);
 
-		printf("\n r %f", nav->GetRoll());
-		printf("\n p %f", nav->GetPitch());
+		//printf("\n r %f", nav->GetRoll());
+		//printf("\n p %f", nav->GetPitch());
 
 		if(m_Joystick->GetRawButton(10)){
 			printf("RESETTING ENCODERS\n");
@@ -1760,11 +1765,10 @@ private:
 
 	//==========================================================USER FUNCTIONS=================================
 
-#define PRACTICE_DRIVE_LIMIT 1
 	inline void teleDrive(void)
 	{
-		leftSpeed = scale(limit(expo(m_Joystick->GetY(), 2), 1) + scale(m_Gamepad->GetRawAxis(1), 0.5) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) - scale(m_Gamepad->GetRawAxis(0), 0.5);
-		rightSpeed = scale(-limit(expo(m_Joystick->GetY(), 2), 1) + scale(-m_Gamepad->GetRawAxis(1), 0.5) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) - scale(m_Gamepad->GetRawAxis(0), 0.5);
+		leftSpeed = scale(limit(expo(m_Joystick->GetY(), 2), 1) + scale(expo(m_Gamepad->GetRawAxis(1), 2), 0.5) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) - scale(expo(m_Gamepad->GetRawAxis(0), 3), 0.5);
+		rightSpeed = scale(-limit(expo(m_Joystick->GetY(), 2), 1) + scale(expo(-m_Gamepad->GetRawAxis(1), 2), 0.5) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) - scale(expo(m_Gamepad->GetRawAxis(0), 3), 0.5);
 
 		//leftSpeed = scale(limit(expo(m_Gamepad2->GetRawAxis(5), 2), 1) + scale(m_Gamepad->GetRawAxis(1), 0.5) - scale(limit(expo(m_Gamepad2->GetRawAxis(4), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) - scale(m_Gamepad->GetRawAxis(0), 0.5);
 		//rightSpeed = scale(-limit(expo(m_Gamepad2->GetRawAxis(5), 2), 1) + scale(-m_Gamepad->GetRawAxis(1), 0.5) - scale(limit(expo(m_Gamepad2->GetRawAxis(4), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) - scale(m_Gamepad->GetRawAxis(0), 0.5);
@@ -2229,7 +2233,7 @@ private:
 	}
 
 
-inline void shootTemp()
+	inline void shootTemp()
 	{
 		switch(shooterState1)
 		{
