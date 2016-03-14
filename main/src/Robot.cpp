@@ -1,9 +1,15 @@
 /**
  * Changelog: please comment your commit message
+ * March 14
+ * -CB
+ * added expo to operator drive control for fine tuning while aiming
+ * organized constants with notes
+ * added ability to save the pictures when robot is trying to shoot
  * -BTK
  * March 13
  * Added butter shot
  * Fixed autos
+ * Tweaked shooter wheel speeds for more accurate shot
  * Option for gamepad driver control commented out
  * - LW
  * March 11
@@ -27,12 +33,9 @@
 #include "SimPID.h"
 #include "AHRS.h"
 
-typedef unsigned long uInt32;
-typedef long long int Int64;
 
-#define RES_X 640
-#define RES_Y 480
-//1548, 3334
+
+//gamepad button locations
 #define JS_RIGHT 90
 #define JS_LEFT 270
 #define GP_UP 0
@@ -43,12 +46,22 @@ typedef long long int Int64;
 #define GP_Y 4
 #define GP_L 5
 #define GP_R 6
+
+//servo and sensor constants
 #define OPEN 1
 #define CLOSED 0
 #define SERVO_IN 90
 #define SERVO_OUT 45
 
+//current shooter constants
+#define SPEED_RPM 6500
+#define BALL_SPIN ((int)(SPEED_RPM*0.3))
+
+//legacy shooter constants
 #define SHOOT_SPEED 0.8225f
+#define SHOOTER_SPEED_CHECK 20000
+
+//appendage constants
 #define PICKUP 1770
 #define SHOOT_LOWBAR 390
 #define SHOOT_FAR 480
@@ -58,34 +71,70 @@ typedef long long int Int64;
 #define TRANSFER 0
 #define HOME_SHOOTER 0
 #define HOME_INTAKE 0
-#define SPEED_RPM 6500
-#define BALL_SPIN ((int)(SPEED_RPM*0.3))
-#define SHOOTER_SPEED_CHECK 20000
+#define PUSHER_OUT 2170
 
-//vision
+//miscellaneous constants
+#define PUSHER_SPEED 0.25
+#define ROLLER_SPEED -0.6
+#define PRACTICE_DRIVE_LIMIT 1
+#define PI 3.141592653589793f
+
+//autonomous constants
+#define AUTO_OVER_MOAT -15250
+#define AUTO_OVER_OTHER -13000
+#define AUTO_LOWBAR_DRIVE -12000
+#define AUTO_POS_2_EXTRA_DRIVE -15000
+#define AUTO_AIM_POS_1 50
+#define AUTO_AIM_POS_2_L -25
+#define AUTO_AIM_POS_2_R 40
+#define AUTO_AIM_POS_3 10
+#define AUTO_AIM_POS_4 -5
+#define AUTO_AIM_POS_5 -40
+#define AUTO_SHOOTER_POS SHOOT_FAR+40
+#define ROLLER_SPEED -0.6
+
+//VISION SETTINGS, READ CAREFULLY
+//left right trim for robot aim in pixels
+//try this first if change is needed
 #define AIM_CORRECTION 30
+//tells robot to save the pictures it takes when trying to shoot
+//comment out to not save pictures
+#define SAVE_SHOT_PICTURES
+
+//camera settings, DO NOT TOUCH
+#define EXPOSURE (Int64)10
+#define BRIGHTNESS (Int64)150
+#define CONTRAST (Int64)10
+#define SATURATION (Int64)100
+#define R_GAIN (float64)0
+#define G_GAIN (float64)1
+#define B_GAIN (float64)0
+#define IMAGE_CENTER 320
+#define CRITERIA_COUNT 4
+#define RES_X 640
+#define RES_Y 480
+
+//filter settings, VERIFY WITH MATLAB DO NOT GUESS
+#define R_THRESHOLD 200
+#define G_THRESHOLD 100
+#define B_THRESHOLD 200
+
+//legacy constants, don't bother
 #define AIM_FILTER 1
 #define AIM_LOOP_WAIT 5
 #define AIM_TIMEOUT 2
 #define AIM_FINE_LIMIT 20
 #define CLOSE_LIMIT 220
-#define IMAGE_CENTER 320
 
-#define R_THRESHOLD 200
-#define G_THRESHOLD 100
-#define B_THRESHOLD 255
-
-//for vertical aim
+//for vertical aim calculations, you can change trim
+//but don't touch others unless verified with excel sheet
 #define SLOPE -0.0779f
 #define INTERCEPT 58.699f
 #define SHOOTER_TRIM 1.f
 
-//fpr horizontal aim
-#define HFOV 0.449422282f
-#define PI 3.14159265f
+//for horizontal aim, you can change aim correction
+#define HFOV 0.449422282f //found through experimentation, DO NOT TOUCH
 #define AUTO_AIM_CORRECTION 0.5
-
-#define TRIM_MODE
 
 class Robot: public IterativeRobot
 {
@@ -169,11 +218,12 @@ private:
 	double rect_left, rect_width, target_y, centerx, last_turn;
 	float autoDelay;
 	float autoAimAngle;
+	int aim_loop_counter;
+	float aim_fly_trim;
 
 
 	//vision filter options
 	ParticleFilterOptions2 filterOptions;
-#define CRITERIA_COUNT 4
 	ParticleFilterCriteria2 filterCriteria[CRITERIA_COUNT];
 	int num_particlesFound;
 	MeasurementType measurements[1];
@@ -281,14 +331,6 @@ private:
 		pusherState = 0;
 		aim_fly_trim = 0;
 	}
-
-#define EXPOSURE (Int64)10
-#define BRIGHTNESS (Int64)150
-#define CONTRAST (Int64)10
-#define SATURATION (Int64)100
-#define R_GAIN (float64)0
-#define G_GAIN (float64)1
-#define B_GAIN (float64)0
 
 	void CameraSettings(void){
 		//get all attributes
@@ -512,18 +554,6 @@ private:
 
 	void AutonomousPeriodic(void)
 	{
-#define AUTO_OVER_MOAT -15250
-#define AUTO_OVER_OTHER -13000
-#define AUTO_LOWBAR_DRIVE -12000
-#define AUTO_POS_2_EXTRA_DRIVE -15000
-#define AUTO_AIM_POS_1 50
-#define AUTO_AIM_POS_2_L -25
-#define AUTO_AIM_POS_2_R 40
-#define AUTO_AIM_POS_3 10
-#define AUTO_AIM_POS_4 -5
-#define AUTO_AIM_POS_5 -40
-#define AUTO_SHOOTER_POS SHOOT_FAR+40
-#define ROLLER_SPEED -0.6
 
 		if(stateTimer->Get() > autoDelay)
 		{
@@ -1803,14 +1833,11 @@ private:
 
 	//==========================================================USER FUNCTIONS=================================
 
-#define PRACTICE_DRIVE_LIMIT 1
 	inline void teleDrive(void)
 	{
-		//leftSpeed = scale(limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) - scale(m_Gamepad->GetRawAxis(0), 0.5);
-		//rightSpeed = scale(-limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) - scale(m_Gamepad->GetRawAxis(0), 0.5);
 
-		leftSpeed = scale(limit(expo(m_Gamepad2->GetRawAxis(5), 2), 1)  - scale(limit(expo(m_Gamepad2->GetRawAxis(4), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) + scale(limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) + scale(m_Gamepad->GetRawAxis(1), 0.5) - scale(m_Gamepad->GetRawAxis(0), 0.5);
-		rightSpeed = scale(-limit(expo(m_Gamepad2->GetRawAxis(5), 2), 1) - scale(limit(expo(m_Gamepad2->GetRawAxis(4), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) + scale(-limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) + scale(-m_Gamepad->GetRawAxis(1), 0.5) - scale(m_Gamepad->GetRawAxis(0), 0.5);
+		leftSpeed = scale(limit(expo(m_Gamepad2->GetRawAxis(5), 2), 1)  - scale(limit(expo(m_Gamepad2->GetRawAxis(4), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) + scale(limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) + scale(expo(m_Gamepad->GetRawAxis(1), 2), 0.5) - scale(expo(m_Gamepad->GetRawAxis(0), 3), 0.5);
+		rightSpeed = scale(-limit(expo(m_Gamepad2->GetRawAxis(5), 2), 1) - scale(limit(expo(m_Gamepad2->GetRawAxis(4), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) + scale(-limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) + scale(expo(-m_Gamepad->GetRawAxis(1), 2), 0.5) - scale(expo(m_Gamepad->GetRawAxis(0), 3), 0.5);
 
 		//printf("Joystick x=%f, y=%f\n", x,y);
 		m_leftDrive4->SetSpeed(leftSpeed);
@@ -1818,7 +1845,6 @@ private:
 		m_rightDrive2->SetSpeed(rightSpeed);
 		m_rightDrive3->SetSpeed(rightSpeed);
 	}
-
 
 	inline void operateShifter(void){
 		if(m_Joystick->GetRawButton(1) || m_Gamepad2->GetRawButton(GP_R)){
@@ -1842,9 +1868,6 @@ private:
 		}
 	}
 
-
-#define PUSHER_SPEED 0.25
-#define PUSHER_OUT 2170
 	inline void pusher(void){
 		if (m_Joystick->GetRawButton(6))
 			m_pusher->Set(PUSHER_SPEED);
@@ -1853,6 +1876,7 @@ private:
 		else
 			m_pusher->Set(0.f);
 	}
+
 	void advancedShoot(void)
 	{
 		//printf("Shooter State: %d\n", shooterState);
@@ -2271,8 +2295,7 @@ private:
 		}
 	}
 
-
-inline void shootTemp()
+	inline void shootTemp()
 	{
 		switch(shooterState1)
 		{
@@ -2329,6 +2352,7 @@ inline void shootTemp()
 		}
 
 	}
+
 	inline void simpleIntake()
 	{
 		if(m_Joystick->GetRawButton(3))
@@ -2405,12 +2429,17 @@ inline void shootTemp()
 
 	//===============================================VISION FUNCTIONS=============================================
 
-	int aim_loop_counter;
-	float aim_fly_trim;
-
 	float getAutoAimAngle(){
 		int image_error;
 		image_error = FindTargetCenter();
+
+#ifdef SAVE_SHOT_PICTURES
+		sprintf(filename, "/home/lvuser/pic%d.bmp", picture_ID);
+		DriverStation::ReportError("writing shot picture " + std::to_string((int)picture_ID) + " to file\n");
+		imaqWriteBMPFile(frame, filename, 30, &colourTable);
+		picture_ID++;
+#endif
+
 		//nav->Reset();
 		if (image_error == 0){
 			float angle = atan((centerx - (RES_X/2) - AIM_CORRECTION)*tan(HFOV)/(RES_X/2))*180/PI + AUTO_AIM_CORRECTION;
@@ -2420,6 +2449,7 @@ inline void shootTemp()
 		else
 			return image_error;
 	}
+
 	int aimAtTarget2(float angle){
 		int currentAngle = nav->GetYaw();
 		turnPID2->setDesiredValue(angle);
@@ -2431,6 +2461,7 @@ inline void shootTemp()
 		printf("aiming at target %f from %f\n", angle, nav->GetYaw());
 		return turnPID2->isDone();
 	}
+
 	int aimAtTarget(void){
 		float turn = last_turn;
 		int image_error;
@@ -2524,6 +2555,7 @@ inline void shootTemp()
 				sprintf(filename, "/home/lvuser/pic%d.bmp", picture_ID);
 				DriverStation::ReportError("writing picture to file\n");
 				imaqWriteBMPFile(frame, filename, 30, &colourTable);
+				picture_ID++;
 			}
 
 			//find filtered blobs
@@ -2572,6 +2604,7 @@ inline void shootTemp()
 		DriverStation::ReportError("ERROR! Unable to take picture!\n");
 		return -1;
 	}
+
 	int pickBlob(int num_blobs)
 	{
 		double width[num_blobs], left[num_blobs], area[num_blobs], perimeter[num_blobs], height[num_blobs], aspect[num_blobs], fill[num_blobs];
@@ -2596,6 +2629,7 @@ inline void shootTemp()
 		//printf("picking blob %d\n", (int)maxAreaIndex);
 		return (int)maxAreaIndex;
 	}
+
 	void showBlobMeasurements(void){
 		double width, left, area, perimeter, height, aspect, fill;
 		for (int i = 0; i < num_particlesFound; i++)
@@ -2615,7 +2649,6 @@ inline void shootTemp()
 		}
 		printf("width: %d\tleft: %d\tarea: %d\tperimeter: %d\theight: %d\n", (int)width, (int)left, (int)area, (int)perimeter, (int)height);
 	}
-
 
 	inline void BinaryFilter(void){
 		for (int i = 0; i < (RES_X*RES_Y); i++){
@@ -2703,5 +2736,6 @@ inline void shootTemp()
 			return -lim;
 		return x;
 	}
+
 };
 START_ROBOT_CLASS(Robot)
