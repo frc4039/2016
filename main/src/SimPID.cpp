@@ -21,6 +21,8 @@ SimPID::SimPID(float p, float i, float d, int epsilon)
 	m_minCycleCount = 10; // Default
 	m_errorSum = 0;
 	m_previousValue = 0;
+
+	IsContinuousAngle = true;
 }
 
 /**
@@ -34,6 +36,18 @@ void SimPID::setConstants(float p, float i, float d)
 	
 }
 
+void SimPID::setContinuousAngle(bool set)
+{
+	IsContinuousAngle = set;
+}
+inline float SimPID::normal(float x)
+{
+	if(x > 180)
+		x -= 360;
+	else if(x < -180)
+		x += 360;
+	return x;
+}
 float SimPID::getP()
 {
 	return m_p;
@@ -118,6 +132,8 @@ float SimPID::calcPID(int currentValue)
 	
 	// Calculate P Component.
 	int error = m_desiredValue - currentValue;
+	if(IsContinuousAngle == false)
+		error = normal(m_desiredValue - currentValue);
 	pVal = m_p * (float)error;
 	
 	// Calculate I Component.

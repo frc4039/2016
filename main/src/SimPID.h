@@ -16,6 +16,9 @@ public:
 	void setMaxOutput(float max);
 	void setMinOutput(float min);
 	void resetErrorSum(void);
+
+	void setContinuousAngle(bool set);
+
 		
 	float calcPID(int current);
 	
@@ -33,12 +36,16 @@ private:
 	int m_errorIncrement; // Max increment to error sum each call
 	int m_errorEpsilon; // Allowable error in determining when done
 	
+	bool IsContinuousAngle;
+
 	bool m_firstCycle; // Flag for first cycle
 	float m_maxOutput; // Ceiling on calculation output
 	float m_minOutput; // floor on calculation output
 
 	int m_minCycleCount; // Minimum number of cycles in epsilon range to be done
 	int m_cycleCount; // Current number of cycles in epsilon range
+	inline float normal(float x);
+
 };
 
 #endif // SIMPID_H_

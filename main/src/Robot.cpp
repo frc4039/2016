@@ -1,6 +1,10 @@
 /**
  * Changelog: please comment your commit message
  * March 14
+ * -BTK
+ * added normal function to correct angle, angle now between 180 and -179
+ * modified SimPID.h and .cpp files to normalize as well, but only when needed
+ * changed RGB threshhold constants
  * -CB
  * added expo to operator drive control for fine tuning while aiming
  * organized constants with notes
@@ -115,8 +119,8 @@
 #define RES_Y 480
 
 //filter settings, VERIFY WITH MATLAB DO NOT GUESS
-#define R_THRESHOLD 200
-#define G_THRESHOLD 100
+#define R_THRESHOLD 125
+#define G_THRESHOLD 180
 #define B_THRESHOLD 200
 
 //legacy constants, don't bother
@@ -271,18 +275,20 @@ private:
 
 		m_LED = new Relay(0);
 
-		drivePID = new SimPID(0.0005 ,0, 0, 500);
+		drivePID = new SimPID(0.001 ,0, 0, 500);
 		drivePID->setMinDoneCycles(10);
 		drivePID->setMaxOutput(0.75);
 
-		turnPID = new SimPID(0.1, 0, 0, 2);
+		turnPID = new SimPID(0.0025, 0, 0, 2);
 		turnPID->setMinDoneCycles(1);
 		turnPID->setMaxOutput(0.5);
+		turnPID->setContinuousAngle(false);
 
 		turnPID2 = new SimPID(0.05,0,0.01,1);
 		turnPID2->setMinDoneCycles(10);
 		turnPID2->setMaxOutput(0.5);
 		turnPID2->setMinOutput(0.3);
+		turnPID2->setContinuousAngle(false);
 
 		shooterPID = new SimPID(0.00175, 0, 0.0005, 10);
 		shooterPID->setMaxOutput(0.25);
@@ -2444,7 +2450,7 @@ private:
 		if (image_error == 0){
 			float angle = atan((centerx - (RES_X/2) - AIM_CORRECTION)*tan(HFOV)/(RES_X/2))*180/PI + AUTO_AIM_CORRECTION;
 			printf("\t\tCalced angle from bot %f\n", angle);
-			return nav->GetYaw() + angle;
+			return normal(nav->GetYaw() + angle);
 		}
 		else
 			return image_error;
@@ -2726,6 +2732,14 @@ private:
 
 	inline float scale(float x, float scale){
 		return x * scale;
+	}
+	inline float normal(float x)
+	{
+		if(x > 180)
+			x -= 360;
+		else if(x < -180)
+			x += 360;
+		return x;
 	}
 
 	inline float limit(float x, float lim)
