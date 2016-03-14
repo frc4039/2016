@@ -1,7 +1,7 @@
 /**
  * Changelog: please comment your commit message
- * -CB
  * March 14
+ * -CB
  * added expo to operator drive control for fine tuning while aiming
  * organized constants with notes
  * added ability to save the pictures when robot is trying to shoot
@@ -2390,7 +2390,7 @@ private:
 
 #ifdef SAVE_SHOT_PICTURES
 		sprintf(filename, "/home/lvuser/pic%d.bmp", picture_ID);
-		DriverStation::ReportError("writing shot picture " + std::to_string((int)pictureID) + " to file\n");
+		DriverStation::ReportError("writing shot picture " + std::to_string((int)picture_ID) + " to file\n");
 		imaqWriteBMPFile(frame, filename, 30, &colourTable);
 		picture_ID++;
 #endif
