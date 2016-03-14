@@ -279,7 +279,7 @@ private:
 		drivePID->setMinDoneCycles(10);
 		drivePID->setMaxOutput(0.75);
 
-		turnPID = new SimPID(0.0025, 0, 0, 2);
+		turnPID = new SimPID(0.05, 0, 0, 2);
 		turnPID->setMinDoneCycles(1);
 		turnPID->setMaxOutput(0.5);
 		turnPID->setContinuousAngle(false);
