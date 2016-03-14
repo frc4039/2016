@@ -1,5 +1,5 @@
 function vision
-    raw = imread('sampleImages/competition/pic0.bmp');
+    raw = imread('sampleImages/03-14/pic3.bmp');
     %colormap(map);
     L = 480;
     W = 640;
@@ -36,8 +36,8 @@ function vision
 % 	}
     %raw(1)
     %Binary Filter
-    R = 200;
-    G = 100;
+    R = 125;
+    G = 180;
     B = 200;
     
     bin = linspace(L, W);

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-dest=../dev/sampleImages/competition
+dest=../dev/sampleImages/03-14
 i="0"
 
 if [ ! -d "$dest" ]; then
@@ -10,10 +10,6 @@ fi
 
 echo "beginning fetch"
 
-while scp -o ConnectTimeout=5 admin@10.40.39.2:/home/lvuser/pic"$i".bmp $dest 
-do
-	echo retrieved pic $i
-	i=$[$i+1]
-done 
+scp -o ConnectTimeout=5 admin@10.40.39.2:/home/lvuser/pic*.bmp $dest 
 
 echo fetch complete
