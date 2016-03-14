@@ -3,6 +3,8 @@
  * -CB
  * March 14
  * added expo to operator drive control for fine tuning while aiming
+ * organized constants with notes
+ * added ability to save the pictures when robot is trying to shoot
  * -BTK
  * March 13
  * Added butter shot
@@ -41,7 +43,7 @@
 #define GP_L 5
 #define GP_R 6
 
-//servo/sensor constants
+//servo and sensor constants
 #define OPEN 1
 #define CLOSED 0
 #define SERVO_IN 90
@@ -89,6 +91,9 @@
 //left right trim for robot aim in pixels
 //try this first if change is needed
 #define AIM_CORRECTION 30
+//tells robot to save the pictures it takes when trying to shoot
+//comment out to not save pictures
+#define SAVE_SHOT_PICTURES
 
 //camera settings, DO NOT TOUCH
 #define EXPOSURE (Int64)10
@@ -2382,6 +2387,14 @@ private:
 	float getAutoAimAngle(){
 		int image_error;
 		image_error = FindTargetCenter();
+
+#ifdef SAVE_SHOT_PICTURES
+		sprintf(filename, "/home/lvuser/pic%d.bmp", picture_ID);
+		DriverStation::ReportError("writing shot picture " + std::to_string((int)pictureID) + " to file\n");
+		imaqWriteBMPFile(frame, filename, 30, &colourTable);
+		picture_ID++;
+#endif
+
 		//nav->Reset();
 		if (image_error == 0){
 			float angle = atan((centerx - (RES_X/2) - AIM_CORRECTION)*tan(HFOV)/(RES_X/2))*180/PI + AUTO_AIM_CORRECTION;
@@ -2497,6 +2510,7 @@ private:
 				sprintf(filename, "/home/lvuser/pic%d.bmp", picture_ID);
 				DriverStation::ReportError("writing picture to file\n");
 				imaqWriteBMPFile(frame, filename, 30, &colourTable);
+				picture_ID++;
 			}
 
 			//find filtered blobs
