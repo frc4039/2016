@@ -66,11 +66,11 @@
 #define SHOOTER_SPEED_CHECK 20000
 
 //appendage constants
-#define PICKUP 1770
+#define PICKUP 1800
 #define SHOOT_LOWBAR 390
-#define SHOOT_FAR 480
+#define SHOOT_FAR 500
 #define SHOOT_CLOSE 665
-#define INTAKE_SHOOT_FAR 550
+#define INTAKE_SHOOT_FAR 650
 #define INTAKE_SHOOT_CLOSE 700
 #define TRANSFER 0
 #define HOME_SHOOTER 0
@@ -100,7 +100,7 @@
 //VISION SETTINGS, READ CAREFULLY
 //left right trim for robot aim in pixels
 //try this first if change is needed
-#define AIM_CORRECTION 30
+#define AIM_CORRECTION 50
 //tells robot to save the pictures it takes when trying to shoot
 //comment out to not save pictures
 #define SAVE_SHOT_PICTURES
@@ -291,10 +291,10 @@ private:
 		turnPID2->setContinuousAngle(false);
 
 		shooterPID = new SimPID(0.00175, 0, 0.0005, 10);
-		shooterPID->setMaxOutput(0.25);
+		shooterPID->setMaxOutput(0.4);
 
 		intakePID = new SimPID(0.001, 0, 0.001, 10);
-		intakePID->setMaxOutput(0.5);
+		intakePID->setMaxOutput(0.7);
 
 		visionPID = new SimPID(0.01, 0.02, 0.001, 5);
 		visionPID->setMaxOutput(0.5);
@@ -1924,7 +1924,11 @@ private:
 			//m_intakeRoller->SetSpeed(0.f);
 
 			if (m_Gamepad->GetRawButton(GP_Y))
-				shooterState = 61;
+			{
+				shooterState = 49;
+				timer->Reset();
+				timer->Start();
+			}
 			else if(m_Gamepad->GetPOV() == GP_UP)
 				shooterState = 20;
 			else if(m_Gamepad->GetRawButton(GP_B))
@@ -2027,7 +2031,41 @@ private:
 				timer->Start();
 
 			}
+			else if(m_Gamepad->GetRawButton(GP_Y) && timer->Get() > 0.5)
+			{
+				shooterState = 49;
+				timer->Reset();
+				timer->Start();
+
+			}
+			else if(m_Gamepad->GetRawButton(GP_X) && timer->Get() > 0.5)
+			{
+				shooterState = 71;
+				timer->Reset();
+				timer->Start();
+
+			}
 			break;
+		case 49: //transfer ball into shooter for shoot close
+			autoShooter(HOME_SHOOTER);
+			shooter1->Set(SPEED_RPM/6);
+			shooter2->Set(-SPEED_RPM/6);
+			m_shootE->Set(false);
+			m_shootR->Set(true);
+
+
+			autoIntake(TRANSFER);
+			m_intakeRoller->SetSpeed(-ROLLER_SPEED);
+
+			if(timer->Get() > 0.75)
+			{
+				shooterState = 61;
+				timer->Stop();
+				timer->Reset();
+			}
+			break;
+
+
 
 		case 50: //transfer ball into shooter
 			autoShooter(HOME_SHOOTER);
@@ -2089,10 +2127,9 @@ private:
 				shooterState = 10;
 			else if(m_Gamepad->GetPOV() == GP_UP)
 				shooterState = 20;
-			else if(m_Gamepad->GetRawButton(GP_X) || m_Gamepad->GetRawButton(GP_A))
+			else if(m_Gamepad->GetRawButton(GP_X))
 				{
 					shooterState = 72;
-					autoAimAngle = getAutoAimAngle();
 					timer->Reset();
 					timer->Start();
 				}
@@ -2198,12 +2235,6 @@ private:
 				timer->Reset();
 				timer->Start();
 				shooterState = 82;
-			}
-			else if(m_Gamepad->GetRawButton(GP_A))
-			{
-				shooterState = 90;
-				timer->Reset();
-				timer->Start();
 			}
 
 			break;
