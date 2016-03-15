@@ -1,7 +1,7 @@
 import Tkinter as tk
 import os.path
 
-file_name = '03-14/match{ID}'
+file_name = '03-15/match{ID}'
 shot_counter = 0
 hit_counter = 0
 average = 0
@@ -31,7 +31,7 @@ Low:
     left:   %d
     middle: %d
     right:  %d
-'''%(shot_counter, hit_counter, average*100.0,
+'''%(shot_counter, location['s'], average*100.0,
      location['q'], location['w'], location['e'],
      location['a'], location['d'],
      location['z'], location['x'], location['c'])
