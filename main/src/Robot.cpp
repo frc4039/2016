@@ -68,7 +68,7 @@
 //appendage constants
 #define PICKUP 1800
 #define SHOOT_LOWBAR 390
-#define SHOOT_FAR 500
+#define SHOOT_FAR 520
 #define SHOOT_CLOSE 665
 #define INTAKE_SHOOT_FAR 650
 #define INTAKE_SHOOT_CLOSE 700
@@ -84,9 +84,9 @@
 #define PI 3.141592653589793f
 
 //autonomous constants
-#define AUTO_OVER_MOAT -15250
-#define AUTO_OVER_OTHER -13000
-#define AUTO_LOWBAR_DRIVE -12000
+#define AUTO_OVER_MOAT -16250
+#define AUTO_OVER_OTHER -14000
+#define AUTO_LOWBAR_DRIVE -16000
 #define AUTO_POS_2_EXTRA_DRIVE -15000
 #define AUTO_AIM_POS_1 50
 #define AUTO_AIM_POS_2_L -25
@@ -100,7 +100,7 @@
 //VISION SETTINGS, READ CAREFULLY
 //left right trim for robot aim in pixels
 //try this first if change is needed
-#define AIM_CORRECTION 50
+#define AIM_CORRECTION 60
 //tells robot to save the pictures it takes when trying to shoot
 //comment out to not save pictures
 #define SAVE_SHOT_PICTURES
@@ -147,10 +147,10 @@ private:
 
 	int autoState, autoMode, autoPosition, shooterState, pusherState, getDistance, shooterState1, autoDirection;
 
-	Victor *m_leftDrive4; //0
-	Victor *m_leftDrive1; //1
-	Victor *m_rightDrive2; //2
-	Victor *m_rightDrive3; //3
+	VictorSP *m_leftDrive4; //4
+	VictorSP *m_leftDrive1; //1
+	VictorSP *m_rightDrive2; //2
+	VictorSP *m_rightDrive3; //3
 	float leftSpeed, rightSpeed;
 
 	VictorSP *m_pusher;
@@ -235,15 +235,15 @@ private:
 //====================================================INIT==============================================
 	void RobotInit(void) override
 	{
-		m_leftDrive4 = new Victor(4);
-		m_leftDrive1 = new Victor(1);
-		m_rightDrive2 = new Victor(2);
-		m_rightDrive3 = new Victor(3);
+		m_leftDrive4 = new VictorSP(4);
+		m_leftDrive1 = new VictorSP(1);
+		m_rightDrive2 = new VictorSP(2);
+		m_rightDrive3 = new VictorSP(3);
 
 		m_shiftHigh = new Solenoid(0);
 		m_shiftLow = new Solenoid(1);
-		m_shootE = new Solenoid(3);
-		m_shootR = new Solenoid(2);
+		m_shootE = new Solenoid(2);
+		m_shootR = new Solenoid(3);
 
 		m_shooterServo = new Servo(6);
 
@@ -271,7 +271,7 @@ private:
 		// shooter2->SetSensorDirection(false);
 		shooter2->SetAllowableClosedLoopErr(1000);
 
-		m_intakeRoller = new VictorSP(7);
+		m_intakeRoller = new VictorSP(8);
 
 		m_LED = new Relay(0);
 
@@ -284,14 +284,15 @@ private:
 		turnPID->setMaxOutput(0.5);
 		turnPID->setContinuousAngle(false);
 
-		turnPID2 = new SimPID(0.05,0,0.01,1);
+		turnPID2 = new SimPID(0.04,0,0.01,1);
 		turnPID2->setMinDoneCycles(10);
 		turnPID2->setMaxOutput(0.5);
-		turnPID2->setMinOutput(0.3);
+		turnPID2->setMinOutput(0.225);
 		turnPID2->setContinuousAngle(false);
 
-		shooterPID = new SimPID(0.00175, 0, 0.0005, 10);
-		shooterPID->setMaxOutput(0.4);
+		shooterPID = new SimPID(0.002772, 0.004, 0.0005, 10);
+		shooterPID->setMaxOutput(0.25);
+
 
 		intakePID = new SimPID(0.001, 0, 0.001, 10);
 		intakePID->setMaxOutput(0.7);
@@ -300,11 +301,11 @@ private:
 		visionPID->setMaxOutput(0.5);
 		visionPID->setMinDoneCycles(20);
 
-		m_shooterHomeSwitch = new DigitalInput(1);
-		m_intakeHomeSwitch = new DigitalInput(0);
+		m_shooterHomeSwitch = new DigitalInput(0);
+		m_intakeHomeSwitch = new DigitalInput(1);
 
-		m_leftDriveEncoder = new Encoder(4, 5);
-		m_rightDriveEncoder = new Encoder(7,6);
+		m_leftDriveEncoder = new Encoder(2, 3);
+		m_rightDriveEncoder = new Encoder(5, 4);
 
 		m_shooter = new CANTalon(2);
 		m_shooter->SetFeedbackDevice(CANTalon::QuadEncoder);
@@ -830,7 +831,7 @@ private:
 
 						switch(autoDirection){
 						case 0:
-							autoDrive(AUTO_OVER_OTHER, AUTO_AIM_POS_2_L);
+							autoDrive(AUTO_OVER_OTHER - 2000, AUTO_AIM_POS_2_L);
 							break;
 						case 1:
 							autoDrive(AUTO_OVER_OTHER, AUTO_AIM_POS_2_R);
@@ -918,7 +919,7 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					if (autoDrive(-15000, AUTO_AIM_POS_2_L))
+					if (autoDrive(AUTO_OVER_OTHER - 2000 - 2000, AUTO_AIM_POS_2_L))
 						{
 							timer->Reset();
 							timer->Start();
@@ -936,7 +937,7 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					if (autoDrive(-15000, 35) && timer->Get() > 1.0)
+					if (autoDrive(AUTO_OVER_OTHER - 2000 - 2000, 35) && timer->Get() > 1.0)
 						{
 							autoAimAngle = getAutoAimAngle();
 							timer->Reset();
@@ -953,7 +954,7 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					if (autoDrive(-14000, AUTO_AIM_POS_2_R))
+					if (autoDrive(AUTO_OVER_OTHER - 1000, AUTO_AIM_POS_2_R))
 						{
 							timer->Reset();
 							timer->Start();
@@ -971,7 +972,7 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					if (autoDrive(-14000, 20) && timer->Get() > 1.0)
+					if (autoDrive(AUTO_OVER_OTHER - 1000, 20) && timer->Get() > 1.0)
 						{
 							autoAimAngle = getAutoAimAngle();
 							timer->Reset();
@@ -1139,7 +1140,7 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					if (autoDrive(-17250, AUTO_AIM_POS_2_L))
+					if (autoDrive(-18250, AUTO_AIM_POS_2_L))
 						{
 							timer->Reset();
 							timer->Start();
@@ -1157,7 +1158,7 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					if (autoDrive(-17250, 35) && timer->Get() > 1.0)
+					if (autoDrive(-18250, 35) && timer->Get() > 1.0)
 						{
 							autoAimAngle = getAutoAimAngle();
 							timer->Reset();
@@ -1174,7 +1175,7 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					if (autoDrive(-16250, AUTO_AIM_POS_2_R))
+					if (autoDrive(-17250, AUTO_AIM_POS_2_R))
 						{
 							timer->Reset();
 							timer->Start();
@@ -1192,7 +1193,7 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					if (autoDrive(-16250, 20) && timer->Get() > 1.0)
+					if (autoDrive(-17250, 20) && timer->Get() > 1.0)
 						{
 							autoAimAngle = getAutoAimAngle();
 							timer->Reset();
@@ -1287,19 +1288,35 @@ private:
 					}
 
 					break;
-				case 4: //rough turn, transfer ball
+				case 4: //transfer
 					autoShooter(HOME_SHOOTER);
 					autoIntake(TRANSFER);
 					shooter1->Set(0.f);
 					shooter2->Set(0.f);
 					m_intakeRoller->SetSpeed(-ROLLER_SPEED);
+					m_shootE->Set(true);
+					m_shootR->Set(false);
+					//m_shooterServo->SetAngle(SERVO_IN);
+					if(timer->Get() > 0.5)
+					{
+						timer->Reset();
+						timer->Start();
+						autoState++;
+					}
+					break;
+				case 5: //rough turn
+					autoShooter(HOME_SHOOTER);
+					autoIntake(TRANSFER);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_intakeRoller->SetSpeed(0.f);
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
 					if(autoDrive(AUTO_LOWBAR_DRIVE, AUTO_AIM_POS_1) && timer->Get() > 1.5)
 						autoState++;
 					break;
-				case 5: //prep ball 1
+				case 6: //prep ball 1
 					autoShooter(SHOOT_FAR);
 					autoIntake(INTAKE_SHOOT_FAR);
 					shooter1->Set(0.f);
@@ -1311,8 +1328,8 @@ private:
 					//m_shooterServo->SetAngle(SERVO_IN);
 						autoState++;
 					break;
-				case 6: //prep ball 2
-					autoShooter(findShooterAngle());
+				case 7: //prep ball 2
+					autoShooter(SHOOT_FAR);
 					autoIntake(INTAKE_SHOOT_FAR);
 					shooter1->Set(-SPEED_RPM);
 					shooter2->Set(SPEED_RPM - BALL_SPIN);
@@ -1322,11 +1339,11 @@ private:
 					//m_shooterServo->SetAngle(SERVO_IN)
 					autoState++;
 					break;
-				case 7: //confirm aim with vision
+				case 8: //confirm aim with vision
 					shooter1->Set(-SPEED_RPM);
 					shooter2->Set(SPEED_RPM - BALL_SPIN);
 					m_intakeRoller->SetSpeed(0.f);
-					autoShooter(findShooterAngle());
+					autoShooter(SHOOT_FAR);
 					autoIntake(INTAKE_SHOOT_FAR);
 					m_shootE->Set(false);
 					m_shootR->Set(true);
@@ -1337,10 +1354,10 @@ private:
 						timer->Start();
 					}
 					break;
-				case 8: //shoot the ball
+				case 9: //shoot the ball
 					shooter1->Set(-SPEED_RPM);
 					shooter2->Set(SPEED_RPM - BALL_SPIN);
-					autoShooter(findShooterAngle());
+					autoShooter(SHOOT_FAR);
 					autoIntake(INTAKE_SHOOT_FAR);
 					m_shootE->Set(true);
 					m_shootR->Set(false);
@@ -1352,7 +1369,7 @@ private:
 						timer->Reset();
 					}
 					break;
-				case 9: //turn off shooter
+				case 10: //turn off shooter
 					shooter1->Set(0.f);
 					shooter2->Set(0.f);
 					autoShooter(HOME_SHOOTER);
