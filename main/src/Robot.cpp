@@ -68,7 +68,7 @@
 //appendage constants
 #define PICKUP 1800
 #define SHOOT_LOWBAR 390
-#define SHOOT_FAR 520
+#define SHOOT_FAR 490
 #define SHOOT_CLOSE 665
 #define INTAKE_SHOOT_FAR 650
 #define INTAKE_SHOOT_CLOSE 700
@@ -84,10 +84,9 @@
 #define PI 3.141592653589793f
 
 //autonomous constants
-#define AUTO_OVER_MOAT -16250
-#define AUTO_OVER_OTHER -14000
-#define AUTO_LOWBAR_DRIVE -16000
-#define AUTO_POS_2_EXTRA_DRIVE -15000
+#define AUTO_OVER_MOAT -20000
+#define AUTO_OVER_OTHER -18000
+#define AUTO_LOWBAR_DRIVE -18000
 #define AUTO_AIM_POS_1 50
 #define AUTO_AIM_POS_2_L -25
 #define AUTO_AIM_POS_2_R 40
@@ -100,7 +99,7 @@
 //VISION SETTINGS, READ CAREFULLY
 //left right trim for robot aim in pixels
 //try this first if change is needed
-#define AIM_CORRECTION 60
+#define AIM_CORRECTION 45
 //tells robot to save the pictures it takes when trying to shoot
 //comment out to not save pictures
 #define SAVE_SHOT_PICTURES
@@ -290,7 +289,7 @@ private:
 		turnPID2->setMinOutput(0.225);
 		turnPID2->setContinuousAngle(false);
 
-		shooterPID = new SimPID(0.002772, 0.004, 0.0005, 10);
+		shooterPID = new SimPID(0.002772, 0, 0.0005, 10);
 		shooterPID->setMaxOutput(0.25);
 
 
@@ -1140,7 +1139,7 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					if (autoDrive(-18250, AUTO_AIM_POS_2_L))
+					if (autoDrive(AUTO_OVER_MOAT - 2000, AUTO_AIM_POS_2_L))
 						{
 							timer->Reset();
 							timer->Start();
@@ -1158,7 +1157,7 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					if (autoDrive(-18250, 35) && timer->Get() > 1.0)
+					if (autoDrive(AUTO_OVER_MOAT - 2000, 35) && timer->Get() > 1.0)
 						{
 							autoAimAngle = getAutoAimAngle();
 							timer->Reset();
@@ -1175,7 +1174,7 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					if (autoDrive(-17250, AUTO_AIM_POS_2_R))
+					if (autoDrive(AUTO_OVER_MOAT - 1000, AUTO_AIM_POS_2_R))
 						{
 							timer->Reset();
 							timer->Start();
@@ -1193,7 +1192,7 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					if (autoDrive(-17250, 20) && timer->Get() > 1.0)
+					if (autoDrive(AUTO_OVER_MOAT - 1000, 20) && timer->Get() > 1.0)
 						{
 							autoAimAngle = getAutoAimAngle();
 							timer->Reset();
@@ -1237,8 +1236,8 @@ private:
 					autoIntake(HOME_INTAKE);
 					shooter1->Set(0.f);
 					shooter2->Set(0.f);
-					m_shootE->Set(true);
-					m_shootR->Set(false);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
 					timer->Reset();
 					timer->Start();
 					autoState++;
@@ -1248,8 +1247,8 @@ private:
 					autoIntake(PICKUP);
 					shooter1->Set(0.f);
 					shooter2->Set(0.f);
-					m_shootE->Set(true);
-					m_shootR->Set(false);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
 					if(timer->Get() > 0.75)
 						{
@@ -1261,8 +1260,8 @@ private:
 					autoIntake(PICKUP);
 					shooter1->Set(0.f);
 					shooter2->Set(0.f);
-					m_shootE->Set(true);
-					m_shootR->Set(false);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
 					if(autoDrive(AUTO_LOWBAR_DRIVE, 0))
 						{
@@ -1277,8 +1276,8 @@ private:
 					autoIntake(TRANSFER);
 					shooter1->Set(0.f);
 					shooter2->Set(0.f);
-					m_shootE->Set(true);
-					m_shootR->Set(false);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
 					if(timer->Get() > 0.5)
 					{
@@ -1291,13 +1290,13 @@ private:
 				case 4: //transfer
 					autoShooter(HOME_SHOOTER);
 					autoIntake(TRANSFER);
-					shooter1->Set(0.f);
-					shooter2->Set(0.f);
+					shooter1->Set(SPEED_RPM/6);
+					shooter2->Set(-SPEED_RPM/6);
 					m_intakeRoller->SetSpeed(-ROLLER_SPEED);
-					m_shootE->Set(true);
-					m_shootR->Set(false);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					if(timer->Get() > 0.5)
+					if(timer->Get() > 0.75)
 					{
 						timer->Reset();
 						timer->Start();
