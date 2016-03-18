@@ -1,7 +1,7 @@
 import Tkinter as tk
 import os.path
 
-file_name = '03-15/match{ID}'
+file_name = '03-17/match{ID}'
 shot_counter = 0
 hit_counter = 0
 average = 0

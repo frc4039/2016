@@ -1,6 +1,6 @@
 #!/bin/bash
 
-dest=../dev/sampleImages/03-14
+dest=../dev/sampleImages/03-17
 i="0"
 
 if [ ! -d "$dest" ]; then
