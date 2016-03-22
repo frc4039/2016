@@ -4,7 +4,7 @@
 /**
  * Initializes the SimPID object. All parameters default to 0.
  */
-SimPID::SimPID(float p, float i, float d, int epsilon)
+SimPID::SimPID(float p, float i, float d, float epsilon)
 {
 	m_p = p;
 	m_i = i;
@@ -61,7 +61,7 @@ int SimPID::getErrorSum()
 /**
  * Sets the allowable error range away from the desired value.
  */
-void SimPID::setErrorEpsilon(int epsilon)
+void SimPID::setErrorEpsilon(float epsilon)
 {
 	m_errorEpsilon = epsilon;
 }
@@ -116,7 +116,7 @@ void SimPID::resetErrorSum(void)
  * PID constants and desired value should be set before calling this
  * function.
  */
-float SimPID::calcPID(int currentValue)
+float SimPID::calcPID(float currentValue)
 {	
 	// Initialize all components to 0.0 to start.
 	float pVal = 0.0;
@@ -131,7 +131,7 @@ float SimPID::calcPID(int currentValue)
 	}
 	
 	// Calculate P Component.
-	int error = m_desiredValue - currentValue;
+	float error = m_desiredValue - currentValue;
 	if(IsContinuousAngle == false)
 		error = normal(m_desiredValue - currentValue);
 	pVal = m_p * (float)error;
