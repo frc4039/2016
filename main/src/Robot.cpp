@@ -29,6 +29,10 @@
  * Increased drivePID max output to 1.0
  * Added teleDriveAlt() to give operator full drive control
  * Added 2-ball auto (8)
+ * - LW
+ * March 22
+ * Random changes from buckee that no one knows
+ * added alt 2 ball auto (unfinished)
  */
 
 #include "WPILib.h"
@@ -68,7 +72,7 @@
 //appendage constants
 #define PICKUP 1800
 #define SHOOT_LOWBAR 390
-#define SHOOT_FAR 490
+#define SHOOT_FAR 550
 #define SHOOT_CLOSE 665
 #define INTAKE_SHOOT_FAR 650
 #define INTAKE_SHOOT_CLOSE 700
@@ -94,12 +98,13 @@
 #define AUTO_AIM_POS_4 -5
 #define AUTO_AIM_POS_5 -40
 #define AUTO_SHOOTER_POS SHOOT_FAR+40
+#define AUTO_LOWBAR_ANGLE 45
 #define ROLLER_SPEED -0.6
 
 //VISION SETTINGS, READ CAREFULLY
 //left right trim for robot aim in pixels
 //try this first if change is needed
-#define AIM_CORRECTION 45
+#define AIM_CORRECTION 35
 //tells robot to save the pictures it takes when trying to shoot
 //comment out to not save pictures
 #define SAVE_SHOT_PICTURES
@@ -283,13 +288,13 @@ private:
 		turnPID->setMaxOutput(0.5);
 		turnPID->setContinuousAngle(false);
 
-		turnPID2 = new SimPID(0.04,0,0.01,1);
+		turnPID2 = new SimPID(0.45,0,0.01,1);
 		turnPID2->setMinDoneCycles(10);
 		turnPID2->setMaxOutput(0.5);
 		turnPID2->setMinOutput(0.225);
 		turnPID2->setContinuousAngle(false);
 
-		shooterPID = new SimPID(0.002772, 0, 0.0005, 10);
+		shooterPID = new SimPID(0.002647, 0, 0.0005, 10);
 		shooterPID->setMaxOutput(0.25);
 
 
@@ -1592,11 +1597,11 @@ private:
 					m_intakeRoller->Set(-ROLLER_SPEED);
 					//m_shooterServo->SetAngle(SERVO_IN);
 					if(timer->Get() > 3.0)
-						{
-							autoState++;
-							timer->Reset();
-							timer->Stop();
-						}
+					{
+						autoState++;
+						timer->Reset();
+						timer->Stop();
+					}
 					break;
 				case 2: //drive under lowbar
 					autoShooter(HOME_SHOOTER);
@@ -1814,6 +1819,91 @@ private:
 
 				}
 				break;
+			case 8: //alt 2-ball
+				switch(autoState)
+				{
+				case 0:
+					autoShooter(HOME_SHOOTER);
+					autoIntake(HOME_INTAKE);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_shootE->Set(true);
+					m_shootR->Set(false);
+					autoState++;
+					break;
+				case 1: //move away from ball
+					autoShooter(HOME_SHOOTER);
+					autoIntake(HOME_INTAKE);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_shootE->Set(true);
+					m_shootR->Set(false);
+					if(autoDrive(10000, 0))
+						autoState++;
+					break;
+				case 2: //lower intake, move under lowbar
+					autoIntake(PICKUP);
+					autoShooter(HOME_SHOOTER);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_shootE->Set(true);
+					m_shootR->Set(false);
+					if(autoDrive(AUTO_LOWBAR_DRIVE, 0))
+						autoState++;
+					break;
+				case 3: //prep ball
+					autoShooter(SHOOT_FAR);
+					autoIntake(INTAKE_SHOOT_FAR);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_intakeRoller->SetSpeed(ROLLER_SPEED);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					if(autoDrive(AUTO_LOWBAR_DRIVE, AUTO_LOWBAR_ANGLE))
+					{
+						timer->Reset();
+						timer->Start();
+						autoState++;
+					}
+					break;
+				case 4: //run shooters
+					autoShooter(SHOOT_FAR);
+					autoIntake(INTAKE_SHOOT_FAR);
+					shooter1->Set(SHOOT_SPEED);
+					shooter2->Set(SHOOT_SPEED);
+					m_intakeRoller->SetSpeed(ROLLER_SPEED);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					if(timer->Get() > 1)
+					{
+						autoState++;
+						timer->Reset();
+					}
+					break;
+				case 5: //shoot
+					autoShooter(SHOOT_FAR);
+					autoIntake(INTAKE_SHOOT_FAR);
+					shooter1->Set(SHOOT_SPEED);
+					shooter2->Set(SHOOT_SPEED);
+					m_intakeRoller->SetSpeed(ROLLER_SPEED);
+					m_shootE->Set(true);
+					m_shootR->Set(false);
+					if(timer->Get() > 0.5)
+					{
+						autoState++;
+						timer->Reset();
+					}
+					break;
+				case 6: //reset angle and lower intake
+					autoShooter(HOME_SHOOTER);
+					autoIntake(PICKUP);
+					shooter1->Set(SHOOT_SPEED);
+					shooter2->Set(SHOOT_SPEED);
+					m_intakeRoller->SetSpeed(ROLLER_SPEED);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+				}
+				break;
 			}
 		}
 	}
@@ -1845,6 +1935,7 @@ private:
 			FindTargetCenter();
 			teleDrive();
 
+
 		}
 		//tempIntake();
 
@@ -1867,6 +1958,7 @@ private:
 		m_rightDrive2->SetSpeed(rightSpeed);
 		m_rightDrive3->SetSpeed(rightSpeed);
 	}
+
 
 	inline void operateShifter(void){
 		if(m_Joystick->GetRawButton(1) || m_Gamepad2->GetRawButton(GP_R)){
