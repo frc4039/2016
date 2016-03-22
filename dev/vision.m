@@ -55,9 +55,7 @@ function vision
             elseif (raw(i, j, 2) < G && raw(i, j, 3) > B)
                 pix = 0;
             end
-            
-            
-            
+           
             bin(i,j) = pix;
         end
     end
