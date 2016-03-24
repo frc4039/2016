@@ -1,5 +1,6 @@
 /**
- * Changelog: please comment your commit message
+ * Changelog: please comment your commit messages
+
  * March 14
  * -BTK
  * added normal function to correct angle, angle now between 180 and -179
@@ -33,6 +34,12 @@
  * March 22
  * Random changes from buckee that no one knows
  * added alt 2 ball auto (unfinished)
+ * - LW
+ * March 23
+ * finished 2-ball auto
+ * March 24
+ * Changed Auto 1 to "do nothing"
+ * Changed auto 0 to drive under lowvar and stop (effectively useless)
  */
 
 #include "WPILib.h"
@@ -568,11 +575,9 @@ private:
 
 		if(stateTimer->Get() > autoDelay)
 		{
-
 			switch(autoMode)
-
 			{
-			case 0:
+			case 1:
 				m_leftDrive4->SetSpeed(0.f);
 				m_leftDrive1->SetSpeed(0.f);
 				m_rightDrive2->SetSpeed(0.f);
@@ -584,7 +589,7 @@ private:
 				m_intakeRoller->SetSpeed(0.f);
 
 				break;
-			case 1: //drive forward with boulder preloaded and move under low bar
+			case 0: //drive forward with boulder preloaded and move under low bar
 				switch(autoState)
 				{
 				case 0:
@@ -787,7 +792,6 @@ private:
 
 				}
 				break;
-
 			case 3: // drive over flat defense in any position and shoot high goal
 				printf("autoState: %d\n", autoState);
 				switch(autoState){
@@ -1229,8 +1233,6 @@ private:
 					break;
 				}
 				break;
-
-
 
 			case 5: //under lowbar, shoot with vision high goal
 				printf("autoState: %d\n", autoState);
@@ -1856,7 +1858,7 @@ private:
 					autoIntake(INTAKE_SHOOT_FAR);
 					shooter1->Set(0.f);
 					shooter2->Set(0.f);
-					m_intakeRoller->SetSpeed(ROLLER_SPEED);
+					m_intakeRoller->SetSpeed(0.f);
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					if(autoDrive(AUTO_LOWBAR_DRIVE, AUTO_LOWBAR_ANGLE))
@@ -1885,23 +1887,84 @@ private:
 					autoIntake(INTAKE_SHOOT_FAR);
 					shooter1->Set(SHOOT_SPEED);
 					shooter2->Set(SHOOT_SPEED);
-					m_intakeRoller->SetSpeed(ROLLER_SPEED);
+					m_intakeRoller->SetSpeed(0.f);
 					m_shootE->Set(true);
 					m_shootR->Set(false);
 					if(timer->Get() > 0.5)
-					{
 						autoState++;
-						timer->Reset();
-					}
 					break;
-				case 6: //reset angle and lower intake
+				case 6: //reset turn and lower intake
 					autoShooter(HOME_SHOOTER);
 					autoIntake(PICKUP);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_intakeRoller->SetSpeed(0.f);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					if(autoDrive(AUTO_LOWBAR_DRIVE, 0))
+						autoState++;
+					break;
+				case 7: //drive back, pick up ball
+					autoShooter(HOME_SHOOTER);
+					autoIntake(PICKUP);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_intakeRoller->SetSpeed(ROLLER_SPEED);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					if(autoDrive(0, 0))
+						autoState++;
+					break;
+				case 8: //lower intake, move under lowbar
+					autoIntake(PICKUP);
+					autoShooter(HOME_SHOOTER);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_shootE->Set(true);
+					m_shootR->Set(false);
+					if(autoDrive(AUTO_LOWBAR_DRIVE, 0))
+						autoState++;
+					break;
+				case 9: //prep ball
+					autoShooter(SHOOT_FAR);
+					autoIntake(INTAKE_SHOOT_FAR);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_intakeRoller->SetSpeed(0.f);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					if(autoDrive(AUTO_LOWBAR_DRIVE, AUTO_LOWBAR_ANGLE))
+					{
+						timer->Reset();
+						timer->Start();
+						autoState++;
+					}
+					break;
+				case 10: //run shooters
+					autoShooter(SHOOT_FAR);
+					autoIntake(INTAKE_SHOOT_FAR);
 					shooter1->Set(SHOOT_SPEED);
 					shooter2->Set(SHOOT_SPEED);
 					m_intakeRoller->SetSpeed(ROLLER_SPEED);
 					m_shootE->Set(false);
 					m_shootR->Set(true);
+					if(timer->Get() > 1)
+					{
+						autoState++;
+						timer->Reset();
+					}
+					break;
+				case 11: //shoot
+					autoShooter(SHOOT_FAR);
+					autoIntake(INTAKE_SHOOT_FAR);
+					shooter1->Set(SHOOT_SPEED);
+					shooter2->Set(SHOOT_SPEED);
+					m_intakeRoller->SetSpeed(0.f);
+					m_shootE->Set(true);
+					m_shootR->Set(false);
+					if(timer->Get() > 0.5)
+						autoState++;
+					break;
 				}
 				break;
 			}
