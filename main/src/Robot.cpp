@@ -55,6 +55,8 @@
 #define JS_LEFT 270
 #define GP_UP 0
 #define GP_DOWN 180
+#define GP_LEFT 270
+#define GP_RIGHT 90
 #define GP_A 1
 #define GP_B 2
 #define GP_X 3
@@ -2012,14 +2014,53 @@ private:
 	inline void teleDrive(void)
 	{
 
-		leftSpeed = scale(limit(expo(m_Gamepad2->GetRawAxis(5), 2), 1)  - scale(limit(expo(m_Gamepad2->GetRawAxis(4), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) + scale(limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) + scale(expo(m_Gamepad->GetRawAxis(1), 2), 0.5) - scale(expo(m_Gamepad->GetRawAxis(0), 3), 0.5);
-		rightSpeed = scale(-limit(expo(m_Gamepad2->GetRawAxis(5), 2), 1) - scale(limit(expo(m_Gamepad2->GetRawAxis(4), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) + scale(-limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) + scale(expo(-m_Gamepad->GetRawAxis(1), 2), 0.5) - scale(expo(m_Gamepad->GetRawAxis(0), 3), 0.5);
+/*
+		if(m_Gamepad->GetPOV() == GP_LEFT)
+		{
+			timer->Reset();
+			timer->Start();
+			m_leftDrive4->SetSpeed(-0.5);
+			m_leftDrive1->SetSpeed(-0.5);
+			m_rightDrive2->SetSpeed(0.5);
+			m_rightDrive3->SetSpeed(0.5);
+			if(timer->Get() > 0.01)
+			{
+				m_leftDrive4->SetSpeed(0);
+				m_leftDrive1->SetSpeed(0);
+				m_rightDrive2->SetSpeed(0);
+				m_rightDrive3->SetSpeed(0);
+			}
 
-		//printf("Joystick x=%f, y=%f\n", x,y);
-		m_leftDrive4->SetSpeed(leftSpeed);
-		m_leftDrive1->SetSpeed(leftSpeed);
-		m_rightDrive2->SetSpeed(rightSpeed);
-		m_rightDrive3->SetSpeed(rightSpeed);
+		}
+		if(m_Gamepad->GetPOV() == GP_RIGHT)
+		{
+			timer->Reset();
+			timer->Start();
+			m_leftDrive4->SetSpeed(0.5);
+			m_leftDrive1->SetSpeed(0.5);
+			m_rightDrive2->SetSpeed(-0.5);
+			m_rightDrive3->SetSpeed(-0.5);
+			if(timer->Get() > 0.1)
+			{
+				m_leftDrive4->SetSpeed(0);
+				m_leftDrive1->SetSpeed(0);
+				m_rightDrive2->SetSpeed(0);
+				m_rightDrive3->SetSpeed(0);
+			}
+
+		}*/
+	//	else
+		//{
+			leftSpeed = scale(limit(expo(m_Gamepad2->GetRawAxis(5), 2), 1)  - scale(limit(expo(m_Gamepad2->GetRawAxis(4), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) + scale(limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) + scale(expo(m_Gamepad->GetRawAxis(1), 2), 0.5) - scale(expo(m_Gamepad->GetRawAxis(0), 3), 0.5);
+			rightSpeed = scale(-limit(expo(m_Gamepad2->GetRawAxis(5), 2), 1) - scale(limit(expo(m_Gamepad2->GetRawAxis(4), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) + scale(-limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) + scale(expo(-m_Gamepad->GetRawAxis(1), 2), 0.5) - scale(expo(m_Gamepad->GetRawAxis(0), 3), 0.5);
+
+			//printf("Joystick x=%f, y=%f\n", x,y);
+			m_leftDrive4->SetSpeed(leftSpeed);
+			m_leftDrive1->SetSpeed(leftSpeed);
+			m_rightDrive2->SetSpeed(rightSpeed);
+			m_rightDrive3->SetSpeed(rightSpeed);
+
+	//	}
 	}
 
 
