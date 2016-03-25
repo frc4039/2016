@@ -160,14 +160,14 @@ private:
 
 	int autoState, autoMode, autoPosition, shooterState, pusherState, getDistance, shooterState1, autoDirection;
 
-	VictorSP *m_leftDrive4; //4
-	VictorSP *m_leftDrive1; //1
-	VictorSP *m_rightDrive2; //2
-	VictorSP *m_rightDrive3; //3
+	Victor *m_leftDrive4; //4
+	Victor *m_leftDrive1; //1
+	Victor *m_rightDrive2; //2
+	Victor *m_rightDrive3; //3
 	float leftSpeed, rightSpeed;
 
-	VictorSP *m_pusher;
-	VictorSP *m_intakeRoller;
+	Victor *m_pusher;
+	Victor *m_intakeRoller;
 
 	CANTalon *shooter1, *shooter2, *m_shooter, *m_intake;
 
@@ -248,10 +248,10 @@ private:
 //====================================================INIT==============================================
 	void RobotInit(void) override
 	{
-		m_leftDrive4 = new VictorSP(4);
-		m_leftDrive1 = new VictorSP(1);
-		m_rightDrive2 = new VictorSP(2);
-		m_rightDrive3 = new VictorSP(3);
+		m_leftDrive4 = new Victor(4);
+		m_leftDrive1 = new Victor(1);
+		m_rightDrive2 = new Victor(2);
+		m_rightDrive3 = new Victor(3);
 
 		m_shiftHigh = new Solenoid(0);
 		m_shiftLow = new Solenoid(1);
@@ -284,7 +284,7 @@ private:
 		// shooter2->SetSensorDirection(false);
 		shooter2->SetAllowableClosedLoopErr(1000);
 
-		m_intakeRoller = new VictorSP(8);
+		m_intakeRoller = new Victor(7);
 
 		m_LED = new Relay(0);
 
@@ -331,7 +331,7 @@ private:
 
 		nav = new AHRS(SPI::Port::kMXP);
 
-		m_pusher = new VictorSP(5);
+		m_pusher = new Victor(5);
 
 		PDP = new PowerDistributionPanel(0);
 
