@@ -43,6 +43,8 @@
  * March 25
  * changed solenoid inputs to correspond with practice bot
  * Changed VictorSP to Victor
+ * Added operateClimber
+ * Fixed solenoid inputs
  */
 
 #include "WPILib.h"
@@ -66,6 +68,8 @@
 #define GP_Y 4
 #define GP_L 5
 #define GP_R 6
+#define GP_SELECT 7
+#define GP_START 8
 
 //servo and sensor constants
 #define OPEN 1
@@ -95,7 +99,7 @@
 
 //miscellaneous constants
 #define PUSHER_SPEED 0.25
-#define ROLLER_SPEED -0.6
+#define ROLLER_SPEED 0.6
 #define PRACTICE_DRIVE_LIMIT 1
 #define PI 3.141592653589793f
 
@@ -111,7 +115,6 @@
 #define AUTO_AIM_POS_5 -40
 #define AUTO_SHOOTER_POS SHOOT_FAR+40
 #define AUTO_LOWBAR_ANGLE 45
-#define ROLLER_SPEED -0.6
 
 //VISION SETTINGS, READ CAREFULLY
 //left right trim for robot aim in pixels
@@ -167,10 +170,10 @@ private:
 	Victor *m_leftDrive1; //1
 	Victor *m_rightDrive2; //2
 	Victor *m_rightDrive3; //3
-	float leftSpeed, rightSpeed;
+	float leftSpeed, rightSpeed, winchSpeed;
 
-	Victor *m_pusher;
-	Victor *m_intakeRoller;
+	VictorSP *m_climber;
+	VictorSP *m_intakeRoller;
 
 	CANTalon *shooter1, *shooter2, *m_shooter, *m_intake;
 
@@ -180,6 +183,7 @@ private:
 
 	Solenoid *m_shiftHigh, *m_shiftLow;
 	Solenoid *m_shootE, *m_shootR;
+	Solenoid *m_climbE, *m_climbR;
 
 	Servo *m_shooterServo;
 
@@ -256,10 +260,12 @@ private:
 		m_rightDrive2 = new Victor(2);
 		m_rightDrive3 = new Victor(3);
 
-		m_shiftHigh = new Solenoid(0);
-		m_shiftLow = new Solenoid(1);
-		m_shootE = new Solenoid(3);
-		m_shootR = new Solenoid(2);
+		m_shiftHigh = new Solenoid(1);
+		m_shiftLow = new Solenoid(0);
+		m_shootE = new Solenoid(2);
+		m_shootR = new Solenoid(3);
+		m_climbE = new Solenoid(4);
+		m_climbR = new Solenoid(5);
 
 		m_shooterServo = new Servo(6);
 
@@ -287,7 +293,7 @@ private:
 		// shooter2->SetSensorDirection(false);
 		shooter2->SetAllowableClosedLoopErr(1000);
 
-		m_intakeRoller = new Victor(7);
+		m_intakeRoller = new VictorSP(7);
 
 		m_LED = new Relay(0);
 
@@ -307,7 +313,7 @@ private:
 		turnPID2->setContinuousAngle(false);
 
 		shooterPID = new SimPID(0.002647, 0, 0.0005, 10);
-		shooterPID->setMaxOutput(0.25);
+		shooterPID->setMaxOutput(0.3);
 
 
 		intakePID = new SimPID(0.001, 0, 0.001, 10);
@@ -334,7 +340,7 @@ private:
 
 		nav = new AHRS(SPI::Port::kMXP);
 
-		m_pusher = new Victor(5);
+		m_climber = new VictorSP(5);
 
 		PDP = new PowerDistributionPanel(0);
 
@@ -1989,6 +1995,7 @@ private:
 	void TeleopPeriodic(void)
 	{
 		operateShifter();
+		operateClimber();
 		advancedShoot();
 		//shootTemp();
 		//simpleShoot();
@@ -2017,25 +2024,17 @@ private:
 	inline void teleDrive(void)
 	{
 
-/*
-		if(m_Gamepad->GetPOV() == GP_LEFT)
+
+/*		if(m_Gamepad->GetPOV() == GP_LEFT)
 		{
-			timer->Reset();
-			timer->Start();
+
 			m_leftDrive4->SetSpeed(-0.5);
 			m_leftDrive1->SetSpeed(-0.5);
 			m_rightDrive2->SetSpeed(0.5);
 			m_rightDrive3->SetSpeed(0.5);
-			if(timer->Get() > 0.01)
-			{
-				m_leftDrive4->SetSpeed(0);
-				m_leftDrive1->SetSpeed(0);
-				m_rightDrive2->SetSpeed(0);
-				m_rightDrive3->SetSpeed(0);
-			}
 
 		}
-		if(m_Gamepad->GetPOV() == GP_RIGHT)
+		else if(m_Gamepad->GetPOV() == GP_RIGHT)
 		{
 			timer->Reset();
 			timer->Start();
@@ -2051,9 +2050,9 @@ private:
 				m_rightDrive3->SetSpeed(0);
 			}
 
-		}*/
-	//	else
-		//{
+		}
+		else
+		{*/
 			leftSpeed = scale(limit(expo(m_Gamepad2->GetRawAxis(5), 2), 1)  - scale(limit(expo(m_Gamepad2->GetRawAxis(4), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) + scale(limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) + scale(expo(m_Gamepad->GetRawAxis(1), 2), 0.5) - scale(expo(m_Gamepad->GetRawAxis(0), 3), 0.5);
 			rightSpeed = scale(-limit(expo(m_Gamepad2->GetRawAxis(5), 2), 1) - scale(limit(expo(m_Gamepad2->GetRawAxis(4), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) + scale(-limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) + scale(expo(-m_Gamepad->GetRawAxis(1), 2), 0.5) - scale(expo(m_Gamepad->GetRawAxis(0), 3), 0.5);
 
@@ -2063,10 +2062,28 @@ private:
 			m_rightDrive2->SetSpeed(rightSpeed);
 			m_rightDrive3->SetSpeed(rightSpeed);
 
-	//	}
+		//}
 	}
 
 
+	inline void operateClimber(void)
+	{
+		if(m_Gamepad->GetRawButton(GP_SELECT) && m_Gamepad->GetRawButton(GP_START))
+		{
+			m_climbE->Set(false);
+			m_climbR->Set(true);
+		}
+		else
+		{
+			m_climbE->Set(true);
+			m_climbR->Set(false);
+		}
+
+		winchSpeed = m_Gamepad->GetRawAxis(5);
+
+		m_climber->Set(winchSpeed);
+
+	}
 	inline void operateShifter(void){
 		if(m_Joystick->GetRawButton(1) || m_Gamepad2->GetRawButton(GP_R)){
 			m_shiftHigh->Set(true);
@@ -2089,14 +2106,6 @@ private:
 		}
 	}
 
-	inline void pusher(void){
-		if (m_Joystick->GetRawButton(6))
-			m_pusher->Set(PUSHER_SPEED);
-		else if (m_Joystick->GetRawButton(4))
-			m_pusher->Set(-PUSHER_SPEED);
-		else
-			m_pusher->Set(0.f);
-	}
 
 	void advancedShoot(void)
 	{
