@@ -40,6 +40,9 @@
  * March 24
  * Changed Auto 1 to "do nothing"
  * Changed auto 0 to drive under lowvar and stop (effectively useless)
+ * March 25
+ * changed solenoid inputs to correspond with practice bot
+ * Changed VictorSP to Victor
  */
 
 #include "WPILib.h"
@@ -255,8 +258,8 @@ private:
 
 		m_shiftHigh = new Solenoid(0);
 		m_shiftLow = new Solenoid(1);
-		m_shootE = new Solenoid(2);
-		m_shootR = new Solenoid(3);
+		m_shootE = new Solenoid(3);
+		m_shootR = new Solenoid(2);
 
 		m_shooterServo = new Servo(6);
 
