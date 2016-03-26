@@ -93,7 +93,7 @@
 //appendage constants
 #define PICKUP 1800
 #define SHOOT_LOWBAR 390
-#define SHOOT_FAR 550
+#define SHOOT_FAR 575
 #define SHOOT_CLOSE 665
 #define INTAKE_SHOOT_FAR 650
 #define INTAKE_SHOOT_CLOSE 700
@@ -101,6 +101,11 @@
 #define HOME_SHOOTER 0
 #define HOME_INTAKE 0
 #define PUSHER_OUT 2170
+
+//manual aim constants
+#define MAN_AIM_ON 0.005
+#define MAN_AIM_OFF 1.0
+#define MAN_AIM_SPEED 0.3
 
 //miscellaneous constants
 #define PUSHER_SPEED 0.25
@@ -124,7 +129,7 @@
 //VISION SETTINGS, READ CAREFULLY
 //left right trim for robot aim in pixels
 //try this first if change is needed
-#define AIM_CORRECTION 35
+#define AIM_CORRECTION 25
 //tells robot to save the pictures it takes when trying to shoot
 //comment out to not save pictures
 #define SAVE_SHOT_PICTURES
@@ -175,7 +180,7 @@ private:
 	Victor *m_leftDrive1; //1
 	Victor *m_rightDrive2; //2
 	Victor *m_rightDrive3; //3
-	float leftSpeed, rightSpeed, winchSpeed;
+	float leftSpeed, rightSpeed, winchSpeed, time;
 
 	VictorSP *m_climber;
 	VictorSP *m_intakeRoller;
@@ -312,10 +317,10 @@ private:
 		turnPID->setMaxOutput(0.5);
 		turnPID->setContinuousAngle(false);
 
-		turnPID2 = new SimPID(0.45,0,0.01,0.5);
+		turnPID2 = new SimPID(0.075,0.04,0.0,0.5);
 		turnPID2->setMinDoneCycles(10);
 		turnPID2->setMaxOutput(0.5);
-		turnPID2->setMinOutput(0.225);
+		turnPID2->setMinOutput(0.1);
 		turnPID2->setContinuousAngle(false);
 
 		shooterPID = new SimPID(0.002647, 0, 0.0005, 10);
@@ -360,6 +365,7 @@ private:
 		pressTimer->Reset();
 
 		VisionInit();
+
 
 		shooterState = 0;
 		autoState = 0;
@@ -2035,6 +2041,9 @@ private:
 		if(m_Joystick->GetRawButton(9))
 			m_shooter->SetPosition(0);
 		m_LED->Set(Relay::kForward);
+		timer->Reset();
+		timer->Start();
+		time = timer->Get();
 	}
 
 	void TeleopPeriodic(void)
@@ -2066,31 +2075,73 @@ private:
 
 	//==========================================================USER FUNCTIONS=================================
 
+
 	inline void teleDrive(void)
 	{
 
 
 		if(m_Gamepad->GetPOV() == GP_LEFT)
 		{
+			/*
+			printf("timer: %f\t delta: %f", timer->Get(), time - timer->Get());
+			if(timer->Get() - time > MAN_AIM_ON + MAN_AIM_OFF)
+			{
+				time = timer->Get();
+			}
+			if(timer->Get() - time < MAN_AIM_ON)
+			{
+				m_leftDrive4->SetSpeed(MAN_AIM_SPEED);
+				m_leftDrive1->SetSpeed(MAN_AIM_SPEED);
+				m_rightDrive2->SetSpeed(MAN_AIM_SPEED);
+				m_rightDrive3->SetSpeed(MAN_AIM_SPEED);
+			}
 
-			m_leftDrive4->SetSpeed(0.5);
-			m_leftDrive1->SetSpeed(0.5);
-			m_rightDrive2->SetSpeed(0.5);
-			m_rightDrive3->SetSpeed(0.5);
+			else if(timer->Get() - time < MAN_AIM_OFF + MAN_AIM_ON)
+			{
+				m_leftDrive4->SetSpeed(0.f);
+				m_leftDrive1->SetSpeed(0.f);
+				m_rightDrive2->SetSpeed(0.f);
+				m_rightDrive3->SetSpeed(0.f);
+			}*/
+
+			m_leftDrive4->SetSpeed(MAN_AIM_SPEED);
+			m_leftDrive1->SetSpeed(MAN_AIM_SPEED);
+			m_rightDrive2->SetSpeed(MAN_AIM_SPEED);
+			m_rightDrive3->SetSpeed(MAN_AIM_SPEED);
+
 
 		}
 		else if(m_Gamepad->GetPOV() == GP_RIGHT)
 		{
-			timer->Reset();
-			timer->Start();
-			m_leftDrive4->SetSpeed(-0.5);
-			m_leftDrive1->SetSpeed(-0.5);
-			m_rightDrive2->SetSpeed(-0.5);
-			m_rightDrive3->SetSpeed(-0.5);
+			/*
+			printf("timer: %f\t delta: %f", timer->Get(), time - timer->Get());
+			if(timer->Get() - time > MAN_AIM_ON + MAN_AIM_OFF)
+			{
+				time = timer->Get();
+			}
+			if(timer->Get() - time < MAN_AIM_ON)
+			{
+				m_leftDrive4->SetSpeed(-MAN_AIM_SPEED);
+				m_leftDrive1->SetSpeed(-MAN_AIM_SPEED);
+				m_rightDrive2->SetSpeed(-MAN_AIM_SPEED);
+				m_rightDrive3->SetSpeed(-MAN_AIM_SPEED);
+			}
 
-
+			else if(timer->Get() - time < MAN_AIM_OFF + MAN_AIM_ON)
+			{
+				m_leftDrive4->SetSpeed(0.f);
+				m_leftDrive1->SetSpeed(0.f);
+				m_rightDrive2->SetSpeed(0.f);
+				m_rightDrive3->SetSpeed(0.f);
+			}
+			 */
+			m_leftDrive4->SetSpeed(-MAN_AIM_SPEED);
+			m_leftDrive1->SetSpeed(-MAN_AIM_SPEED);
+			m_rightDrive2->SetSpeed(-MAN_AIM_SPEED);
+			m_rightDrive3->SetSpeed(-MAN_AIM_SPEED);
 
 		}
+
 		else
 		{
 			leftSpeed = scale(limit(expo(m_Gamepad2->GetRawAxis(5), 2), 1)  - scale(limit(expo(m_Gamepad2->GetRawAxis(4), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) + scale(limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) + scale(expo(m_Gamepad->GetRawAxis(1), 2), 0.5) - scale(expo(m_Gamepad->GetRawAxis(0), 3), 0.5);
