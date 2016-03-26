@@ -1,6 +1,7 @@
 /**
  * Changelog: please comment your commit messages
 
+
  * March 14
  * -BTK
  * added normal function to correct angle, angle now between 180 and -179
@@ -45,6 +46,8 @@
  * Changed VictorSP to Victor
  * Added operateClimber
  * Fixed solenoid inputs
+ * March 26-BTK
+ * Added slight turn in teledrive
  */
 
 #include "WPILib.h"
@@ -201,6 +204,7 @@ private:
 	Timer *timer;
 	Timer *trimTimer;
 	Timer *stateTimer;
+	Timer *pressTimer;
 	double last_time;
 
 	DigitalInput *m_shooterHomeSwitch;
@@ -327,7 +331,7 @@ private:
 		m_intakeHomeSwitch = new DigitalInput(1);
 
 		m_leftDriveEncoder = new Encoder(2, 3);
-		m_rightDriveEncoder = new Encoder(5, 4);
+		m_rightDriveEncoder = new Encoder(4, 5);
 
 		m_shooter = new CANTalon(2);
 		m_shooter->SetFeedbackDevice(CANTalon::QuadEncoder);
@@ -350,6 +354,8 @@ private:
 		stateTimer->Reset();
 		trimTimer = new Timer();
 		trimTimer->Reset();
+		pressTimer = new Timer();
+		pressTimer->Reset();
 
 		VisionInit();
 
@@ -562,6 +568,8 @@ private:
 		//printf("shooterA: %d\tintakeA: %d\n", m_shooter->GetEncPosition(), m_intake->GetEncPosition());
 		//printf("shooterA: %f\tintakeA: %f\n", m_shooter->GetPosition(), m_intake->GetPosition());
 
+		if(m_Gamepad->GetRawButton(GP_R))
+			autoPosition = 6;
 	}
 
 	//========================================================AUTONOMOUS=======================================
@@ -803,7 +811,7 @@ private:
 
 				}
 				break;
-			case 3: // drive over flat defense in any position and shoot high goal
+			case 3: // drive over flat defense in any position and shoot high goal/halt
 				printf("autoState: %d\n", autoState);
 				switch(autoState){
 				case 0:
@@ -867,6 +875,9 @@ private:
 						break;
 					case 5:
 						result = autoDrive(AUTO_OVER_OTHER, AUTO_AIM_POS_5);
+						break;
+					case 6:
+						autoState = 5;
 						break;
 					}
 					if(autoPosition == 2 && autoDirection == 0 && timer->Get() > 1.5)
@@ -1088,6 +1099,9 @@ private:
 						break;
 					case 5:
 						result = autoDrive(AUTO_OVER_MOAT, AUTO_AIM_POS_5);
+						break;
+					case 6:
+						autoState = 5;
 						break;
 					}
 					if(autoPosition == 2 && autoDirection == 0 && timer->Get() > 1.5)
@@ -1454,7 +1468,7 @@ private:
 						autoState++;
 					}
 					break;
-				case 3: //drive to OZ
+				case 3: //drive to courtyard
 					autoShooter(HOME_SHOOTER);
 					autoIntake(HOME_INTAKE);
 					shooter1->Set(0.f);
@@ -1890,6 +1904,7 @@ private:
 					if(timer->Get() > 1)
 					{
 						autoState++;
+						timer->Stop();
 						timer->Reset();
 					}
 					break;
@@ -1936,7 +1951,35 @@ private:
 					if(autoDrive(AUTO_LOWBAR_DRIVE, 0))
 						autoState++;
 					break;
-				case 9: //prep ball
+				case 9: //home intake
+					autoShooter(HOME_SHOOTER);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_intakeRoller->SetSpeed(0.f);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					if(autoIntake(HOME_INTAKE))
+					{
+						timer->Start();
+						autoState++;
+					}
+					break;
+				case 10: //prep ball 1
+					autoShooter(HOME_SHOOTER);
+					autoIntake(HOME_INTAKE);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_intakeRoller->SetSpeed(ROLLER_SPEED);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					if(timer->Get() > 0.5)
+					{
+						timer->Reset();
+						timer->Stop();
+						autoState++;
+					}
+					break;
+				case 11: //prep ball 2
 					autoShooter(SHOOT_FAR);
 					autoIntake(INTAKE_SHOOT_FAR);
 					shooter1->Set(0.f);
@@ -1951,12 +1994,12 @@ private:
 						autoState++;
 					}
 					break;
-				case 10: //run shooters
+				case 12: //run shooters
 					autoShooter(SHOOT_FAR);
 					autoIntake(INTAKE_SHOOT_FAR);
 					shooter1->Set(SHOOT_SPEED);
 					shooter2->Set(SHOOT_SPEED);
-					m_intakeRoller->SetSpeed(ROLLER_SPEED);
+					m_intakeRoller->SetSpeed(0.f);
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					if(timer->Get() > 1)
@@ -1965,7 +2008,7 @@ private:
 						timer->Reset();
 					}
 					break;
-				case 11: //shoot
+				case 13: //shoot
 					autoShooter(SHOOT_FAR);
 					autoIntake(INTAKE_SHOOT_FAR);
 					shooter1->Set(SHOOT_SPEED);
@@ -2025,11 +2068,11 @@ private:
 	{
 
 
-/*		if(m_Gamepad->GetPOV() == GP_LEFT)
+		if(m_Gamepad->GetPOV() == GP_LEFT)
 		{
 
-			m_leftDrive4->SetSpeed(-0.5);
-			m_leftDrive1->SetSpeed(-0.5);
+			m_leftDrive4->SetSpeed(0.5);
+			m_leftDrive1->SetSpeed(0.5);
 			m_rightDrive2->SetSpeed(0.5);
 			m_rightDrive3->SetSpeed(0.5);
 
@@ -2038,21 +2081,16 @@ private:
 		{
 			timer->Reset();
 			timer->Start();
-			m_leftDrive4->SetSpeed(0.5);
-			m_leftDrive1->SetSpeed(0.5);
+			m_leftDrive4->SetSpeed(-0.5);
+			m_leftDrive1->SetSpeed(-0.5);
 			m_rightDrive2->SetSpeed(-0.5);
 			m_rightDrive3->SetSpeed(-0.5);
-			if(timer->Get() > 0.1)
-			{
-				m_leftDrive4->SetSpeed(0);
-				m_leftDrive1->SetSpeed(0);
-				m_rightDrive2->SetSpeed(0);
-				m_rightDrive3->SetSpeed(0);
-			}
+
+
 
 		}
 		else
-		{*/
+		{
 			leftSpeed = scale(limit(expo(m_Gamepad2->GetRawAxis(5), 2), 1)  - scale(limit(expo(m_Gamepad2->GetRawAxis(4), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) + scale(limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) + scale(expo(m_Gamepad->GetRawAxis(1), 2), 0.5) - scale(expo(m_Gamepad->GetRawAxis(0), 3), 0.5);
 			rightSpeed = scale(-limit(expo(m_Gamepad2->GetRawAxis(5), 2), 1) - scale(limit(expo(m_Gamepad2->GetRawAxis(4), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) + scale(-limit(expo(m_Joystick->GetY(), 2), 1) - scale(limit(expo(m_Joystick->GetX(), 3), 1), 0.7f), PRACTICE_DRIVE_LIMIT) + scale(expo(-m_Gamepad->GetRawAxis(1), 2), 0.5) - scale(expo(m_Gamepad->GetRawAxis(0), 3), 0.5);
 
@@ -2062,7 +2100,7 @@ private:
 			m_rightDrive2->SetSpeed(rightSpeed);
 			m_rightDrive3->SetSpeed(rightSpeed);
 
-		//}
+		}
 	}
 
 
