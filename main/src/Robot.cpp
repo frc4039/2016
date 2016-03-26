@@ -81,7 +81,9 @@
 #define SERVO_OUT 45
 
 //current shooter constants
-#define SPEED_RPM 6500
+//#define SPEED_RPM 6500
+#define SPEED_RPM 1500
+#define SPEED_RPM_LOW 750
 #define BALL_SPIN ((int)(SPEED_RPM*0.3))
 
 //legacy shooter constants
@@ -2122,6 +2124,7 @@ private:
 		m_climber->Set(winchSpeed);
 
 	}
+
 	inline void operateShifter(void){
 		if(m_Joystick->GetRawButton(1) || m_Gamepad2->GetRawButton(GP_R)){
 			m_shiftHigh->Set(true);
@@ -2143,7 +2146,6 @@ private:
 			m_shootR->Set(true);
 		}
 	}
-
 
 	void advancedShoot(void)
 	{
@@ -2452,8 +2454,8 @@ private:
 
 		case 71: //prep shooter for shot from home
 			autoShooter(HOME_SHOOTER);
-			shooter1->Set(-SPEED_RPM);
-			shooter2->Set(SPEED_RPM);
+			shooter1->Set(-SPEED_RPM_LOW);
+			shooter2->Set(SPEED_RPM_LOW);
 			m_shootE->Set(false);
 			m_shootR->Set(true);
 
@@ -2524,8 +2526,8 @@ private:
 			//shoot from home
 			//printf("Shooting...");
 			autoShooter(HOME_SHOOTER);
-			shooter1->Set(-SPEED_RPM);
-			shooter2->Set(SPEED_RPM);
+			shooter1->Set(-SPEED_RPM_LOW);
+			shooter2->Set(SPEED_RPM_LOW);
 			m_shootE->Set(true);
 			m_shootR->Set(false);
 
