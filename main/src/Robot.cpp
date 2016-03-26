@@ -306,7 +306,7 @@ private:
 		turnPID->setMaxOutput(0.5);
 		turnPID->setContinuousAngle(false);
 
-		turnPID2 = new SimPID(0.45,0,0.01,1);
+		turnPID2 = new SimPID(0.45,0,0.01,0.5);
 		turnPID2->setMinDoneCycles(10);
 		turnPID2->setMaxOutput(0.5);
 		turnPID2->setMinOutput(0.225);
