@@ -2,6 +2,7 @@
  * Changelog: please comment your commit messages
 
 
+
  * March 14
  * -BTK
  * added normal function to correct angle, angle now between 180 and -179
@@ -48,6 +49,8 @@
  * Fixed solenoid inputs
  * March 26-BTK
  * Added slight turn in teledrive
+ * March 28- BTK
+ * Fixed autos, added auto 5 for rough terrain, changed lowbar shot to auto 6
  */
 
 #include "WPILib.h"
@@ -83,7 +86,7 @@
 //current shooter constants
 //#define SPEED_RPM 6500
 #define SPEED_RPM 1500
-#define SPEED_RPM_LOW 750
+#define SPEED_RPM_LOW 1000
 #define BALL_SPIN ((int)(SPEED_RPM*0.3))
 
 //legacy shooter constants
@@ -114,15 +117,16 @@
 #define PI 3.141592653589793f
 
 //autonomous constants
-#define AUTO_OVER_MOAT -20000
-#define AUTO_OVER_OTHER -18000
-#define AUTO_LOWBAR_DRIVE -18000
+#define AUTO_OVER_MOAT -17000
+#define AUTO_OVER_OTHER -15000
+#define AUTO_OVER_ROUGH -13000
+#define AUTO_LOWBAR_DRIVE -15000
 #define AUTO_AIM_POS_1 50
 #define AUTO_AIM_POS_2_L -25
-#define AUTO_AIM_POS_2_R 40
+#define AUTO_AIM_POS_2_R 35
 #define AUTO_AIM_POS_3 10
 #define AUTO_AIM_POS_4 -5
-#define AUTO_AIM_POS_5 -40
+#define AUTO_AIM_POS_5 -30
 #define AUTO_SHOOTER_POS SHOOT_FAR+40
 #define AUTO_LOWBAR_ANGLE 45
 
@@ -312,19 +316,19 @@ private:
 		drivePID->setMinDoneCycles(10);
 		drivePID->setMaxOutput(0.75);
 
-		turnPID = new SimPID(0.05, 0, 0, 2);
+		turnPID = new SimPID(0.075, 0, 0, 2);
 		turnPID->setMinDoneCycles(1);
 		turnPID->setMaxOutput(0.5);
 		turnPID->setContinuousAngle(false);
 
-		turnPID2 = new SimPID(0.075,0.04,0.0,0.5);
+		turnPID2 = new SimPID(0.075,0.04,0.0,0.75);
 		turnPID2->setMinDoneCycles(10);
 		turnPID2->setMaxOutput(0.5);
 		turnPID2->setMinOutput(0.1);
 		turnPID2->setContinuousAngle(false);
 
-		shooterPID = new SimPID(0.002647, 0, 0.0005, 10);
-		shooterPID->setMaxOutput(0.3);
+		shooterPID = new SimPID(0.00265, 0, 0.0005, 10);
+		shooterPID->setMaxOutput(0.4);
 
 
 		intakePID = new SimPID(0.001, 0, 0.001, 10);
@@ -528,6 +532,8 @@ private:
 
 		//printf("\n r %f", nav->GetRoll());
 		//printf("\n p %f", nav->GetPitch());
+
+
 
 		if(m_Joystick->GetRawButton(10)){
 			printf("RESETTING ENCODERS\n");
@@ -866,7 +872,7 @@ private:
 
 						switch(autoDirection){
 						case 0:
-							autoDrive(AUTO_OVER_OTHER - 2000, AUTO_AIM_POS_2_L);
+							autoDrive(AUTO_OVER_OTHER, AUTO_AIM_POS_2_L);
 							break;
 						case 1:
 							autoDrive(AUTO_OVER_OTHER, AUTO_AIM_POS_2_R);
@@ -883,6 +889,7 @@ private:
 						break;
 					case 5:
 						result = autoDrive(AUTO_OVER_OTHER, AUTO_AIM_POS_5);
+
 						break;
 					case 6:
 						autoState = 5;
@@ -898,16 +905,17 @@ private:
 						{
 							timer->Reset();
 							timer->Start();
-							autoState = 8;
+							autoState = 9;
 						}
-					else if(result && timer->Get() > 1.5)
+					else if(result && timer->Get() > 1.0)
 					{
-						autoState = 10;
+						autoState = 11;
 						timer->Reset();
 						timer->Start();
 					}
 					break;
 				case 3: //prep ball 2, confirm aim with vision
+					FindTargetCenter();
 					shooter1->Set(-SPEED_RPM);
 					shooter2->Set(SPEED_RPM - BALL_SPIN);
 					autoShooter(SHOOT_FAR);
@@ -921,6 +929,8 @@ private:
 						timer->Reset();
 						timer->Start();
 					}
+
+					shooterState = 60;
 					break;
 				case 4: //shoot the ball
 					shooter1->Set(-SPEED_RPM);
@@ -934,19 +944,21 @@ private:
 					if(timer->Get() > 0.3)
 					{
 						autoState++;
-						timer->Stop();
+						timer->Start();
 						timer->Reset();
 					}
 					break;
 				case 5: //turn off shooter
 					shooter1->Set(0.f);
 					shooter2->Set(0.f);
-					autoShooter(HOME_SHOOTER);
-					autoIntake(HOME_INTAKE);
+					autoShooter(SHOOT_FAR);
+					autoIntake(INTAKE_SHOOT_FAR);
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
 					m_intakeRoller->SetSpeed(0.f);
+					if(timer->Get() > 0.5)
+						autoState = 12;
 					break;
 				case 6: //position 2_L extra drive
 					autoShooter(SHOOT_FAR);
@@ -957,7 +969,7 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					if (autoDrive(AUTO_OVER_OTHER - 2000 - 2000, AUTO_AIM_POS_2_L))
+					if (autoDrive(AUTO_OVER_OTHER - 2000, AUTO_AIM_POS_2_L))
 						{
 							timer->Reset();
 							timer->Start();
@@ -975,7 +987,7 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					if (autoDrive(AUTO_OVER_OTHER - 2000 - 2000, 35) && timer->Get() > 1.0)
+					if (autoDrive(AUTO_OVER_OTHER - 2000, 35) && timer->Get() > 1.0)
 						{
 							autoAimAngle = getAutoAimAngle();
 							timer->Reset();
@@ -983,7 +995,7 @@ private:
 							autoState = 3;
 						}
 					break;
-				case 8: //position 2_R extra drive
+				/*case 8: //position 2_R extra drive
 					autoShooter(SHOOT_FAR);
 					autoIntake(INTAKE_SHOOT_FAR);
 					shooter1->Set(0.f);
@@ -992,7 +1004,7 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					if (autoDrive(AUTO_OVER_OTHER - 1000, AUTO_AIM_POS_2_R))
+					if (autoDrive(AUTO_OVER_OTHER - 2500, AUTO_AIM_POS_2_R))
 						{
 							timer->Reset();
 							timer->Start();
@@ -1000,7 +1012,7 @@ private:
 						}
 
 
-					break;
+					break;*/
 				case 9: //position 2_R rough angle
 					autoShooter(SHOOT_FAR);
 					autoIntake(INTAKE_SHOOT_FAR);
@@ -1010,7 +1022,7 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					if (autoDrive(AUTO_OVER_OTHER - 1000, 20) && timer->Get() > 1.0)
+					if (autoDrive(AUTO_OVER_OTHER, AUTO_AIM_POS_2_R) && timer->Get() > 1.0)
 						{
 							autoAimAngle = getAutoAimAngle();
 							timer->Reset();
@@ -1019,10 +1031,29 @@ private:
 						}
 					break;
 
-				case 10: //wait a bit before taking picture
+				case 10: //back up before shot
 					autoShooter(SHOOT_FAR);
-					if(timer->Get() > 1.0){
+					autoIntake(INTAKE_SHOOT_FAR);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_intakeRoller->SetSpeed(0.f);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					//m_shooterServo->SetAngle(SERVO_IN);
+					if (autoDrive(AUTO_OVER_OTHER, 20) && timer->Get() > 0.5)
+						{
+							autoAimAngle = getAutoAimAngle();
+							timer->Reset();
+							timer->Start();
+							autoState = 3;
+						}
+					break;
+
+				case 11: //wait a bit before taking picture
+					autoShooter(SHOOT_FAR);
+						if(timer->Get() > 1.0){
 						autoAimAngle = getAutoAimAngle();
+
 						/*if(autoPosition == 2)
 						{
 							timer->Reset();
@@ -1035,10 +1066,23 @@ private:
 							timer->Start();
 							autoState = 8;
 						}*/
-						autoState = 3;
 						timer->Reset();
 						timer->Start();
+						autoState = 3;
+
 					}
+					break;
+
+				case 12: //go to home
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					autoShooter(HOME_SHOOTER);
+					autoIntake(HOME_INTAKE);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					//m_shooterServo->SetAngle(SERVO_IN);
+					m_intakeRoller->SetSpeed(0.f);
+					shooterState = 10;
 					break;
 				}
 				break;
@@ -1122,16 +1166,276 @@ private:
 						{
 							timer->Reset();
 							timer->Start();
-							autoState = 8;
+							autoState = 9;
 						}
 					else if(result && timer->Get() > 1.5)
 					{
-						autoState = 10;
+						autoState = 11;
 						timer->Reset();
 						timer->Start();
 					}
 					break;
 				case 3: //prep ball 2, confirm aim with vision
+					FindTargetCenter();
+					shooter1->Set(-SPEED_RPM);
+					shooter2->Set(SPEED_RPM - BALL_SPIN);
+					autoShooter(SHOOT_FAR);
+					autoIntake(INTAKE_SHOOT_FAR);
+					m_intakeRoller->SetSpeed(0.f);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					//m_shooterServo->SetAngle(SERVO_IN);
+					if(aimAtTarget2(autoAimAngle) == 1 && timer->Get() > 1.0){ //&& (shooter1->GetEncVel() < -SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK)){
+						autoState++;
+						timer->Reset();
+						timer->Start();
+					}
+
+					shooterState = 60;
+					break;
+				case 4: //shoot the ball
+					shooter1->Set(-SPEED_RPM);
+					shooter2->Set(SPEED_RPM - BALL_SPIN);
+					autoShooter(SHOOT_FAR);
+					autoIntake(INTAKE_SHOOT_FAR);
+					m_shootE->Set(true);
+					m_shootR->Set(false);
+					//m_shooterServo->SetAngle(SERVO_OUT);
+					m_intakeRoller->SetSpeed(0.f);
+					if(timer->Get() > 0.3)
+					{
+						autoState++;
+						timer->Start();
+						timer->Reset();
+					}
+					break;
+				case 5: //turn off shooter
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					autoShooter(SHOOT_FAR);
+					autoIntake(INTAKE_SHOOT_FAR);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					//m_shooterServo->SetAngle(SERVO_IN);
+					m_intakeRoller->SetSpeed(0.f);
+					if(timer->Get() > 0.5)
+							autoState = 12;
+					break;
+				case 6: //position 2_L extra drive
+					autoShooter(SHOOT_FAR);
+					autoIntake(INTAKE_SHOOT_FAR);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_intakeRoller->SetSpeed(0.f);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					//m_shooterServo->SetAngle(SERVO_IN);
+					if (autoDrive(AUTO_OVER_MOAT - 2000, AUTO_AIM_POS_2_L))
+						{
+							timer->Reset();
+							timer->Start();
+							autoState++;
+						}
+
+
+					break;
+				case 7: //position 2_L rough angle
+					autoShooter(SHOOT_FAR);
+					autoIntake(INTAKE_SHOOT_FAR);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_intakeRoller->SetSpeed(0.f);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					//m_shooterServo->SetAngle(SERVO_IN);
+					if (autoDrive(AUTO_OVER_MOAT - 2000, 35) && timer->Get() > 1.0)
+						{
+							autoAimAngle = getAutoAimAngle();
+							timer->Reset();
+							timer->Start();
+							autoState = 3;
+						}
+					break;
+			/*	case 8: //position 2_R extra drive
+					autoShooter(SHOOT_FAR);
+					autoIntake(INTAKE_SHOOT_FAR);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_intakeRoller->SetSpeed(0.f);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					//m_shooterServo->SetAngle(SERVO_IN);
+					if (autoDrive(AUTO_OVER_MOAT - 2500, AUTO_AIM_POS_2_R))
+						{
+							timer->Reset();
+							timer->Start();
+							autoState++;
+						}
+
+
+					break;*/
+				case 9: //position 2_R rough angle
+					autoShooter(SHOOT_FAR);
+					autoIntake(INTAKE_SHOOT_FAR);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_intakeRoller->SetSpeed(0.f);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					//m_shooterServo->SetAngle(SERVO_IN);
+					if (autoDrive(AUTO_OVER_MOAT, AUTO_AIM_POS_2_R) && timer->Get() > 1.0)
+						{
+							autoAimAngle=getAutoAimAngle();
+							timer->Reset();
+							timer->Start();
+							autoState = 3;
+						}
+					break;
+				case 10: //back up before shot
+					autoShooter(SHOOT_FAR);
+					autoIntake(INTAKE_SHOOT_FAR);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_intakeRoller->SetSpeed(0.f);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					//m_shooterServo->SetAngle(SERVO_IN);
+					if (autoDrive(AUTO_OVER_MOAT + 1000, 20) && timer->Get() > 0.5)
+						{
+							autoAimAngle = getAutoAimAngle();
+							timer->Reset();
+							timer->Start();
+							autoState = 3;
+						}
+					break;
+
+				case 11: //wait a bit before taking picture
+					autoShooter(SHOOT_FAR);
+					if(timer->Get() > 1.0){
+						autoAimAngle = getAutoAimAngle();
+						/*if(autoPosition == 2)
+						{
+							timer->Reset();
+							timer->Start();
+							autoState = 6;
+						}
+						if(autoPosition == 5)
+						{
+							timer->Reset();
+							timer->Start();
+							autoState = 8;
+						}*/
+						autoState = 3;
+						timer->Reset();
+						timer->Start();
+					}
+					break;
+
+				case 12: //go to home
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					autoShooter(HOME_SHOOTER);
+					autoIntake(HOME_INTAKE);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					//m_shooterServo->SetAngle(SERVO_IN);
+					m_intakeRoller->SetSpeed(0.f);
+					shooterState = 10;
+					break;
+				}
+				break;
+
+			case 5: // drive over rough terrain defense in any position and shoot high goal/halt
+				printf("autoState: %d\n", autoState);
+				switch(autoState){
+				case 0:
+					m_leftDrive4->SetSpeed(0.f);
+					m_leftDrive1->SetSpeed(0.f);
+					m_rightDrive2->SetSpeed(0.f);
+					m_rightDrive3->SetSpeed(0.f);
+					autoShooter(HOME_SHOOTER);
+					autoIntake(HOME_INTAKE);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					//m_shooterServo->SetAngle(SERVO_IN);
+					autoState++;
+					break;
+				case 1: //drive over defense
+					autoShooter(HOME_SHOOTER);
+					autoIntake(HOME_INTAKE);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_intakeRoller->SetSpeed(0.f);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					//m_shooterServo->SetAngle(SERVO_IN);
+					if (autoDrive(AUTO_OVER_ROUGH, 0) && nav->GetRoll() > -10 && nav->GetRoll() < 10){
+						autoState++;
+						timer->Reset();
+						timer->Start();
+					}
+					break;
+				case 2: //aim at tower roughly and prep ball 1
+					autoShooter(SHOOT_FAR);
+					autoIntake(INTAKE_SHOOT_FAR);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_intakeRoller->SetSpeed(0.f);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					//m_shooterServo->SetAngle(SERVO_IN);
+					int result;
+					switch(autoPosition){
+					case 2:
+
+						switch(autoDirection){
+						case 0:
+							autoDrive(AUTO_OVER_ROUGH, AUTO_AIM_POS_2_L);
+							break;
+						case 1:
+							autoDrive(AUTO_OVER_ROUGH, AUTO_AIM_POS_2_R);
+							break;
+
+						}
+
+						break;
+					case 3:
+						result = autoDrive(AUTO_OVER_ROUGH, AUTO_AIM_POS_3);
+						break;
+					case 4:
+						result = autoDrive(AUTO_OVER_ROUGH, AUTO_AIM_POS_4);
+						break;
+					case 5:
+						result = autoDrive(AUTO_OVER_ROUGH, AUTO_AIM_POS_5);
+
+						break;
+					case 6:
+						autoState = 5;
+						break;
+					}
+					if(autoPosition == 2 && autoDirection == 0 && timer->Get() > 1.5)
+						{
+							timer->Reset();
+							timer->Start();
+							autoState = 6;
+						}
+					else if(autoPosition == 2 && autoDirection == 1 && timer->Get() > 1.5)
+						{
+							timer->Reset();
+							timer->Start();
+							autoState = 8;
+						}
+					else if(result && timer->Get() > 1.0)
+					{
+						autoState = 11;
+						timer->Reset();
+						timer->Start();
+					}
+					break;
+				case 3: //prep ball 2, confirm aim with vision
+					FindTargetCenter();
 					shooter1->Set(-SPEED_RPM);
 					shooter2->Set(SPEED_RPM - BALL_SPIN);
 					autoShooter(SHOOT_FAR);
@@ -1181,7 +1485,7 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					if (autoDrive(AUTO_OVER_MOAT - 2000, AUTO_AIM_POS_2_L))
+					if (autoDrive(AUTO_OVER_ROUGH - 2000, AUTO_AIM_POS_2_L))
 						{
 							timer->Reset();
 							timer->Start();
@@ -1199,7 +1503,7 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					if (autoDrive(AUTO_OVER_MOAT - 2000, 35) && timer->Get() > 1.0)
+					if (autoDrive(AUTO_OVER_ROUGH - 2000, 35) && timer->Get() > 1.0)
 						{
 							autoAimAngle = getAutoAimAngle();
 							timer->Reset();
@@ -1216,7 +1520,7 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					if (autoDrive(AUTO_OVER_MOAT - 1000, AUTO_AIM_POS_2_R))
+					if (autoDrive(AUTO_OVER_ROUGH - 2500, AUTO_AIM_POS_2_R))
 						{
 							timer->Reset();
 							timer->Start();
@@ -1234,7 +1538,24 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					if (autoDrive(AUTO_OVER_MOAT - 1000, 20) && timer->Get() > 1.0)
+					if (autoDrive(AUTO_OVER_ROUGH - 2500, 20) && timer->Get() > 1.0)
+						{
+							timer->Reset();
+							timer->Start();
+							autoState = 10;
+						}
+					break;
+
+				case 10: //back up before shot
+					autoShooter(SHOOT_FAR);
+					autoIntake(INTAKE_SHOOT_FAR);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_intakeRoller->SetSpeed(0.f);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					//m_shooterServo->SetAngle(SERVO_IN);
+					if (autoDrive(AUTO_OVER_ROUGH, 20) && timer->Get() > 0.5)
 						{
 							autoAimAngle = getAutoAimAngle();
 							timer->Reset();
@@ -1243,10 +1564,11 @@ private:
 						}
 					break;
 
-				case 10: //wait a bit before taking picture
+				case 11: //wait a bit before taking picture
 					autoShooter(SHOOT_FAR);
-					if(timer->Get() > 1.0){
+						if(timer->Get() > 1.0){
 						autoAimAngle = getAutoAimAngle();
+
 						/*if(autoPosition == 2)
 						{
 							timer->Reset();
@@ -1259,15 +1581,16 @@ private:
 							timer->Start();
 							autoState = 8;
 						}*/
-						autoState = 3;
 						timer->Reset();
 						timer->Start();
+						autoState = 3;
+
 					}
 					break;
 				}
 				break;
 
-			case 5: //under lowbar, shoot with vision high goal
+			case 6: //under lowbar, shoot with vision high goal
 				printf("autoState: %d\n", autoState);
 				switch(autoState)
 				{
@@ -1336,7 +1659,7 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					if(timer->Get() > 0.75)
+					if(timer->Get() > 0.7)
 					{
 						timer->Reset();
 						timer->Start();
@@ -1379,6 +1702,7 @@ private:
 					autoState++;
 					break;
 				case 8: //confirm aim with vision
+					FindTargetCenter();
 					shooter1->Set(-SPEED_RPM);
 					shooter2->Set(SPEED_RPM - BALL_SPIN);
 					m_intakeRoller->SetSpeed(0.f);
@@ -2391,9 +2715,9 @@ private:
 
 
 			autoIntake(TRANSFER);
-			m_intakeRoller->SetSpeed(-ROLLER_SPEED);
+			//m_intakeRoller->SetSpeed(-ROLLER_SPEED);
 
-			if(timer->Get() > 0.75)
+			if(timer->Get() > 0.3)
 			{
 				shooterState = 60;
 				timer->Stop();
@@ -2416,13 +2740,19 @@ private:
 				shooterState = 10;
 			else if(m_Gamepad->GetPOV() == GP_UP)
 				shooterState = 20;
-			else if(m_Gamepad->GetRawButton(GP_X) || m_Gamepad->GetRawButton(GP_A))
+			else if(m_Gamepad->GetRawButton(GP_X))
 				{
 					shooterState = 70;
-					autoAimAngle = getAutoAimAngle();
 					timer->Reset();
 					timer->Start();
 				}
+			else if(m_Gamepad->GetRawButton(GP_A))
+			{
+				shooterState = 90;
+				autoAimAngle = getAutoAimAngle();
+				timer->Reset();
+				timer->Start();
+			}
 			else if(m_Gamepad->GetRawButton(GP_Y))
 				shooterState = 61;
 			break;
@@ -2603,7 +2933,7 @@ private:
 
 			autoIntake(INTAKE_SHOOT_CLOSE);
 			//m_intakeRoller->SetSpeed(0.f);
-
+			printf("timer is %f\n", timer->Get());
 			if(timer->Get() > 1.0)
 			{
 				shooterState = 10;
@@ -2638,10 +2968,28 @@ private:
 			autoIntake(INTAKE_SHOOT_FAR);
 			if(!m_Gamepad->GetRawButton(GP_A))
 				shooterState = 70;
-			if(aimAtTarget2(autoAimAngle) == 1 && timer->Get() > 0.5 ){//&& (shooter1->GetEncVel() < -SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK)){//goal object detected
+			if(aimAtTarget2(autoAimAngle) == 1 && timer->Get() > 0.5){//&& (shooter1->GetEncVel() < -SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK)){//goal object detected
+				timer->Reset();
+				timer->Start();
+				shooterState = 89;
+			}
+			break;
+		case 91: //spin up
+			shooter1->Set(-SPEED_RPM);
+			shooter2->Set(SPEED_RPM - BALL_SPIN);
+			autoShooter(SHOOT_FAR);
+			autoIntake(INTAKE_SHOOT_FAR);
+			if(timer->Get() > 0.5)
+			{
+				timer->Reset();
+				timer->Start();
+				autoState = 89;
+			}
+			else if(m_Gamepad->GetRawButton(GP_B))
+			{
 				timer->Start();
 				timer->Reset();
-				shooterState = 89;
+				shooterState = 69;
 			}
 			break;
 		}
