@@ -119,7 +119,7 @@
 
 //autonomous constants
 #define AUTO_OVER_MOAT -17000
-#define AUTO_OVER_OTHER -15000
+#define AUTO_OVER_OTHER -16000
 #define AUTO_OVER_ROUGH -13000
 #define AUTO_LOWBAR_DRIVE -18000
 #define AUTO_AIM_POS_1 45
@@ -134,7 +134,7 @@
 //VISION SETTINGS, READ CAREFULLY
 //left right trim for robot aim in pixels
 //try this first if change is needed
-#define AIM_CORRECTION 35
+#define AIM_CORRECTION 30
 //tells robot to save the pictures it takes when trying to shoot
 //comment out to not save pictures
 #define SAVE_SHOT_PICTURES
@@ -322,10 +322,10 @@ private:
 		turnPID->setMaxOutput(0.5);
 		turnPID->setContinuousAngle(false);
 
-		turnPID2 = new SimPID(0.068 ,0.05,0.0,0.75);
+		turnPID2 = new SimPID(0.068 ,0.065,0.0,0.75);
 		turnPID2->setMinDoneCycles(10);
 		turnPID2->setMaxOutput(0.5);
-		turnPID2->setMinOutput(0.17);
+		turnPID2->setMinOutput(0.18);
 		turnPID2->setContinuousAngle(false);
 
 		shooterPID = new SimPID(0.0025, 0, 0.0001,10);
