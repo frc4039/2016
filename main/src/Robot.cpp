@@ -44,7 +44,7 @@
  * Changed auto 0 to drive under lowvar and stop (effectively useless)
  * March 25
  * changed solenoid inputs to correspond with practice bot
- * Changed VictorSP to Victor
+ * Changed VictorSPSP to VictorSP
  * Added operateClimber
  * Fixed solenoid inputs
  * March 26-BTK
@@ -84,9 +84,10 @@
 #define SERVO_OUT 45
 
 //current shooter constants
-//#define SPEED_RPM 6500
-#define SPEED_RPM 1500
-#define SPEED_RPM_LOW 1000
+#define SPEED_RPM 6500
+//#define SPEED_RPM 1500
+//#define SPEED_RPM_LOW 1000
+#define SPEED_RPM_LOW 3900
 #define BALL_SPIN ((int)(SPEED_RPM*0.3))
 
 //legacy shooter constants
@@ -96,7 +97,7 @@
 //appendage constants
 #define PICKUP 1800
 #define SHOOT_LOWBAR 390
-#define SHOOT_FAR 575
+#define SHOOT_FAR 620
 #define SHOOT_CLOSE 665
 #define INTAKE_SHOOT_FAR 650
 #define INTAKE_SHOOT_CLOSE 700
@@ -112,7 +113,7 @@
 
 //miscellaneous constants
 #define PUSHER_SPEED 0.25
-#define ROLLER_SPEED 0.6
+#define ROLLER_SPEED -0.5
 #define PRACTICE_DRIVE_LIMIT 1
 #define PI 3.141592653589793f
 
@@ -120,20 +121,20 @@
 #define AUTO_OVER_MOAT -17000
 #define AUTO_OVER_OTHER -15000
 #define AUTO_OVER_ROUGH -13000
-#define AUTO_LOWBAR_DRIVE -15000
-#define AUTO_AIM_POS_1 50
+#define AUTO_LOWBAR_DRIVE -18000
+#define AUTO_AIM_POS_1 45
 #define AUTO_AIM_POS_2_L -25
 #define AUTO_AIM_POS_2_R 35
-#define AUTO_AIM_POS_3 10
-#define AUTO_AIM_POS_4 -5
-#define AUTO_AIM_POS_5 -30
+#define AUTO_AIM_POS_3 5
+#define AUTO_AIM_POS_4 0
+#define AUTO_AIM_POS_5 -25
 #define AUTO_SHOOTER_POS SHOOT_FAR+40
 #define AUTO_LOWBAR_ANGLE 45
 
 //VISION SETTINGS, READ CAREFULLY
 //left right trim for robot aim in pixels
 //try this first if change is needed
-#define AIM_CORRECTION 25
+#define AIM_CORRECTION 35
 //tells robot to save the pictures it takes when trying to shoot
 //comment out to not save pictures
 #define SAVE_SHOT_PICTURES
@@ -166,7 +167,7 @@
 //for vertical aim calculations, you can change trim
 //but don't touch others unless verified with excel sheet
 #define SLOPE -0.0779f
-#define INTERCEPT 58.699f
+#define INTERCEPT 58.699f/
 #define SHOOTER_TRIM 1.f
 
 //for horizontal aim, you can change aim correction
@@ -180,10 +181,10 @@ private:
 
 	int autoState, autoMode, autoPosition, shooterState, pusherState, getDistance, shooterState1, autoDirection;
 
-	Victor *m_leftDrive4; //4
-	Victor *m_leftDrive1; //1
-	Victor *m_rightDrive2; //2
-	Victor *m_rightDrive3; //3
+	VictorSP *m_leftDrive4; //4
+	VictorSP *m_leftDrive1; //1
+	VictorSP *m_rightDrive2; //2
+	VictorSP *m_rightDrive3; //3
 	float leftSpeed, rightSpeed, winchSpeed, time;
 
 	VictorSP *m_climber;
@@ -270,13 +271,13 @@ private:
 //====================================================INIT==============================================
 	void RobotInit(void) override
 	{
-		m_leftDrive4 = new Victor(4);
-		m_leftDrive1 = new Victor(1);
-		m_rightDrive2 = new Victor(2);
-		m_rightDrive3 = new Victor(3);
+		m_leftDrive4 = new VictorSP(4);
+		m_leftDrive1 = new VictorSP(1);
+		m_rightDrive2 = new VictorSP(2);
+		m_rightDrive3 = new VictorSP(3);
 
-		m_shiftHigh = new Solenoid(1);
-		m_shiftLow = new Solenoid(0);
+		m_shiftHigh = new Solenoid(0);
+		m_shiftLow = new Solenoid(1);
 		m_shootE = new Solenoid(2);
 		m_shootR = new Solenoid(3);
 		m_climbE = new Solenoid(4);
@@ -308,7 +309,7 @@ private:
 		// shooter2->SetSensorDirection(false);
 		shooter2->SetAllowableClosedLoopErr(1000);
 
-		m_intakeRoller = new VictorSP(7);
+		m_intakeRoller = new VictorSP(8);
 
 		m_LED = new Relay(0);
 
@@ -321,13 +322,13 @@ private:
 		turnPID->setMaxOutput(0.5);
 		turnPID->setContinuousAngle(false);
 
-		turnPID2 = new SimPID(0.075,0.04,0.0,0.75);
+		turnPID2 = new SimPID(0.068 ,0.05,0.0,0.75);
 		turnPID2->setMinDoneCycles(10);
 		turnPID2->setMaxOutput(0.5);
-		turnPID2->setMinOutput(0.1);
+		turnPID2->setMinOutput(0.17);
 		turnPID2->setContinuousAngle(false);
 
-		shooterPID = new SimPID(0.00265, 0, 0.0005, 10);
+		shooterPID = new SimPID(0.0025, 0, 0.0001,10);
 		shooterPID->setMaxOutput(0.4);
 
 
@@ -1436,6 +1437,7 @@ private:
 					break;
 				case 3: //prep ball 2, confirm aim with vision
 					FindTargetCenter();
+					shooterState = 60;
 					shooter1->Set(-SPEED_RPM);
 					shooter2->Set(SPEED_RPM - BALL_SPIN);
 					autoShooter(SHOOT_FAR);
@@ -1659,7 +1661,7 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					if(timer->Get() > 0.7)
+					if(timer->Get() > 0.5)
 					{
 						timer->Reset();
 						timer->Start();
@@ -1676,7 +1678,11 @@ private:
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
 					if(autoDrive(AUTO_LOWBAR_DRIVE, AUTO_AIM_POS_1) && timer->Get() > 1.5)
-						autoState++;
+						{
+							timer->Reset();
+							timer->Start();
+							autoState++;
+						}
 					break;
 				case 6: //prep ball 1
 					autoShooter(SHOOT_FAR);
@@ -1688,16 +1694,24 @@ private:
 					m_shootR->Set(true);
 					autoAimAngle = getAutoAimAngle();
 					//m_shooterServo->SetAngle(SERVO_IN);
+					if(timer->Get() > 1.0)
+					{
+						timer->Reset();
+						timer->Start();
 						autoState++;
+					}
+
 					break;
 				case 7: //prep ball 2
 					autoShooter(SHOOT_FAR);
 					autoIntake(INTAKE_SHOOT_FAR);
-					shooter1->Set(-SPEED_RPM);
+					shooter1->Set(-SPEED_RPM/6);
 					shooter2->Set(SPEED_RPM - BALL_SPIN);
 					m_intakeRoller->SetSpeed(0.f);
 					m_shootE->Set(false);
 					m_shootR->Set(true);
+					timer->Start();
+					timer->Reset();
 					//m_shooterServo->SetAngle(SERVO_IN)
 					autoState++;
 					break;
@@ -1711,6 +1725,7 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
+					shooterState = 60;
 					if(aimAtTarget2(autoAimAngle) == 1 && timer->Get() > 1.0){ //&& (shooter1->GetEncVel() < -SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK)){
 						autoState++;
 						timer->Reset();
@@ -2713,11 +2728,11 @@ private:
 			m_shootE->Set(false);
 			m_shootR->Set(true);
 
-
+			m_intakeRoller->SetSpeed(-ROLLER_SPEED);
 			autoIntake(TRANSFER);
 			//m_intakeRoller->SetSpeed(-ROLLER_SPEED);
 
-			if(timer->Get() > 0.3)
+			if(timer->Get() > 0.5)
 			{
 				shooterState = 60;
 				timer->Stop();
@@ -3096,7 +3111,7 @@ private:
 
 			m_intake->Set(-rotate);
 
-			//printf("intake rotate power: %f \t error: %d \t target: %d \n", rotate, currentTicks - ticks, ticks);
+		//	printf("intake rotate power: %f \t error: %d \t target: %d \n", rotate, currentTicks - ticks, ticks);
 
 			return intakePID->isDone();
 		}
