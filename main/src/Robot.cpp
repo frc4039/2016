@@ -43,10 +43,10 @@
 #define SERVO_OUT 45
 
 //current shooter constants
-#define SPEED_RPM 6500
-//#define SPEED_RPM 1500
-//#define SPEED_RPM_LOW 1000
-#define SPEED_RPM_LOW 3900
+//#define SPEED_RPM 6500
+#define SPEED_RPM 1600
+#define SPEED_RPM_LOW 1100
+//#define SPEED_RPM_LOW 3900
 #define BALL_SPIN ((int)(SPEED_RPM*0.3))
 
 //legacy shooter constants
@@ -81,6 +81,8 @@
 #define AUTO_OVER_OTHER -16000
 #define AUTO_OVER_ROUGH -13000
 #define AUTO_LOWBAR_DRIVE -18000
+#define AUTO_CHEVAL_DRIVE_1 3477
+#define AUTO_CHEVAL_DRIVE_2 10600
 #define AUTO_AIM_POS_1 45
 #define AUTO_AIM_POS_2_L -25
 #define AUTO_AIM_POS_2_R 35
@@ -229,6 +231,7 @@ private:
 
 //====================================================INIT==============================================
 	void RobotInit(void) override
+
 	{
 		m_leftDrive4 = new VictorSP(4);
 		m_leftDrive1 = new VictorSP(1);
@@ -276,16 +279,16 @@ private:
 		drivePID->setMinDoneCycles(10);
 		drivePID->setMaxOutput(0.75);
 
-		turnPID = new SimPID(0.075, 0, 0, 2);
+		turnPID = new SimPID(0.075, 0, 0, 5);
 		turnPID->setMinDoneCycles(1);
 		turnPID->setMaxOutput(0.5);
-		turnPID->setContinuousAngle(false);
+		turnPID->setContinuousAngle(true);
 
 		turnPID2 = new SimPID(0.058 ,0.06,0.0,0.75);
 		turnPID2->setMinDoneCycles(10);
 		turnPID2->setMaxOutput(0.5);
 		turnPID2->setMinOutput(0.12);
-		turnPID2->setContinuousAngle(false);
+		turnPID2->setContinuousAngle(true);
 
 		shooterPID = new SimPID(0.0025, 0, 0.0001,10);
 		shooterPID->setMaxOutput(0.4);
@@ -565,6 +568,11 @@ private:
 
 	void AutonomousPeriodic(void)
 	{
+		printf("auto state: %d", autoState);
+		printf("\tleft: %d\t right: %d\t angle: %f\n", m_leftDriveEncoder->Get(), m_rightDriveEncoder->Get(), nav->GetYaw());
+		printf("\t\tdrive done %d\tturn done: %d\n", drivePID->isDone(), turnPID->isDone());
+
+
 		if(stateTimer->Get() > autoDelay)
 		{
 			switch(autoMode)
@@ -1073,7 +1081,7 @@ private:
 					autoIntake(HOME_INTAKE);
 					m_shootE->Set(false);
 					m_shootR->Set(true);
-					if(autoDrive(-AUTO_OVER_OTHER * 0.6, 0))
+					if(autoDrive(0, 0))
 						autoState++;
 					break;
 				case 15: //lower intake
@@ -1902,7 +1910,333 @@ private:
 					m_rightDrive3->SetSpeed(0.f);
 				}
 				break;
-/*			case 6: // drive over cheval, shoot in high goal
+
+				case 7: // drive over chevel in any position and shoot high goal/halt
+					printf("autoState: %d\n", autoState);
+					switch(autoState){
+					case 0:
+						drivePID->setMaxOutput(0.3);
+						m_leftDrive4->SetSpeed(0.f);
+						m_leftDrive1->SetSpeed(0.f);
+						m_rightDrive2->SetSpeed(0.f);
+						m_rightDrive3->SetSpeed(0.f);
+						autoShooter(HOME_SHOOTER);
+						autoIntake(HOME_INTAKE);
+						shooter1->Set(0.f);
+						shooter2->Set(0.f);
+						m_shootE->Set(false);
+						m_shootR->Set(true);
+						//m_shooterServo->SetAngle(SERVO_IN);
+						autoState++;
+						break;
+					case 1: //drive towards cheval
+						autoShooter(HOME_SHOOTER);
+						autoIntake(HOME_INTAKE);
+						shooter1->Set(0.f);
+						shooter2->Set(0.f);
+						m_intakeRoller->SetSpeed(0.f);
+						m_shootE->Set(false);
+						m_shootR->Set(true);
+						//m_shooterServo->SetAngle(SERVO_IN);
+						if (autoDrive(AUTO_CHEVAL_DRIVE_1, 0) && nav->GetRoll() > -10 && nav->GetRoll() < 10){
+							autoState++;
+							timer->Reset();
+							timer->Start();
+						}
+						break;
+					case 2: //lower intake
+						autoShooter(HOME_SHOOTER);
+						autoIntake(PICKUP);
+						shooter1->Set(0.f);
+						shooter2->Set(0.f);
+						m_intakeRoller->SetSpeed(0.f);
+						m_shootE->Set(false);
+						m_shootR->Set(true);
+						if(timer->Get() > 0.5)
+						{
+							timer->Reset();
+							timer->Start();
+							drivePID->setMaxOutput(0.7);
+							autoState++;
+						}
+						break;
+					case 3: //drive to courtyard
+						autoShooter(HOME_SHOOTER);
+
+						shooter1->Set(0.f);
+						shooter2->Set(0.f);
+						m_intakeRoller->SetSpeed(0.f);
+						m_shootE->Set(false);
+						m_shootR->Set(true);
+						if((m_leftDriveEncoder->Get() + m_rightDriveEncoder->Get())/2 >  AUTO_CHEVAL_DRIVE_1 + 1200){
+							autoIntake(HOME_INTAKE);
+						}
+						else
+							autoIntake(PICKUP);
+
+						if(autoDrive(AUTO_CHEVAL_DRIVE_2, 0))
+						{
+							turnPID->setMaxOutput(1.0);
+							timer->Reset();
+							timer->Start();
+							autoState++;
+						}
+						break;
+					case 4: //spin around
+						autoShooter(HOME_SHOOTER);
+						autoIntake(HOME_INTAKE);
+						shooter1->Set(0.f);
+						shooter2->Set(0.f);
+						m_intakeRoller->SetSpeed(0.f);
+						m_shootE->Set(false);
+						m_shootR->Set(true);
+						if(autoDrive(AUTO_CHEVAL_DRIVE_2, 180))
+						{
+							timer->Reset();
+							timer->Start();
+							autoState++;
+						}
+						break;
+					case 5: //aim at tower roughly and prep ball 1
+						autoShooter(SHOOT_FAR);
+						autoIntake(INTAKE_SHOOT_FAR);
+						shooter1->Set(0.f);
+						shooter2->Set(0.f);
+						m_intakeRoller->SetSpeed(0.f);
+						m_shootE->Set(false);
+						m_shootR->Set(true);
+						//m_shooterServo->SetAngle(SERVO_IN);
+						int result;
+						switch(autoPosition){
+						case 2:
+
+							switch(autoDirection){
+							case 0:
+								autoDrive(AUTO_CHEVAL_DRIVE_2, AUTO_AIM_POS_2_L + 180);
+								break;
+							case 1:
+								autoDrive(AUTO_CHEVAL_DRIVE_2, AUTO_AIM_POS_2_R + 180);
+								break;
+
+							}
+
+							break;
+						case 3:
+							result = autoDrive(AUTO_CHEVAL_DRIVE_2, AUTO_AIM_POS_3 + 180);
+							break;
+						case 4:
+							result = autoDrive(AUTO_CHEVAL_DRIVE_2, AUTO_AIM_POS_4 + 180);
+							break;
+						case 5:
+							result = autoDrive(AUTO_CHEVAL_DRIVE_2, AUTO_AIM_POS_5 + 180);
+
+							break;
+						case 6:
+							autoState = 8;
+							break;
+						}
+						if(autoPosition == 2 && autoDirection == 0 && timer->Get() > 1.5)
+							{
+								timer->Reset();
+								timer->Start();
+								autoState = 9;
+							}
+						else if(autoPosition == 2 && autoDirection == 1 && timer->Get() > 1.5)
+							{
+								timer->Reset();
+								timer->Start();
+								autoState = 11;
+							}
+						else if(result && timer->Get() > 1.0)
+						{
+							autoState = 13;
+							timer->Reset();
+							timer->Start();
+						}
+						break;
+					case 6: //prep ball 2, confirm aim with vision
+						FindTargetCenter();
+						shooter1->Set(-SPEED_RPM);
+						shooter2->Set(SPEED_RPM - BALL_SPIN);
+						autoShooter(SHOOT_FAR);
+						autoIntake(INTAKE_SHOOT_FAR);
+						m_intakeRoller->SetSpeed(0.f);
+						m_shootE->Set(false);
+						m_shootR->Set(true);
+						//m_shooterServo->SetAngle(SERVO_IN);
+						if(aimAtTarget2(autoAimAngle) == 1 && timer->Get() > 1.0){ //&& (shooter1->GetEncVel() < -SHOOTER_SPEED_CHECK) && (shooter2->GetEncVel() > SHOOTER_SPEED_CHECK)){
+							autoState++;
+							timer->Reset();
+							timer->Start();
+						}
+						else if(timer->Get() > 2 && abs(centerx-(RES_X/2)+AIM_CORRECTION) < 3){
+							timer->Reset();
+							timer->Start();
+							autoState = 15;
+						}
+
+						shooterState = 60;
+						break;
+					case 7: //shoot the ball
+						shooter1->Set(-SPEED_RPM);
+						shooter2->Set(SPEED_RPM - BALL_SPIN);
+						autoShooter(SHOOT_FAR);
+						autoIntake(INTAKE_SHOOT_FAR);
+						m_shootE->Set(true);
+						m_shootR->Set(false);
+						//m_shooterServo->SetAngle(SERVO_OUT);
+						m_intakeRoller->SetSpeed(0.f);
+						if(timer->Get() > 0.3)
+						{
+							autoState++;
+							timer->Start();
+							timer->Reset();
+						}
+						break;
+					case 8: //turn off shooter
+						shooter1->Set(0.f);
+						shooter2->Set(0.f);
+						autoShooter(SHOOT_FAR);
+						autoIntake(INTAKE_SHOOT_FAR);
+						m_shootE->Set(false);
+						m_shootR->Set(true);
+						//m_shooterServo->SetAngle(SERVO_IN);
+						m_intakeRoller->SetSpeed(0.f);
+
+						break;
+					case 9: //position 2_L extra drive
+						autoShooter(SHOOT_FAR);
+						autoIntake(INTAKE_SHOOT_FAR);
+						shooter1->Set(0.f);
+						shooter2->Set(0.f);
+						m_intakeRoller->SetSpeed(0.f);
+						m_shootE->Set(false);
+						m_shootR->Set(true);
+						//m_shooterServo->SetAngle(SERVO_IN);
+						if (autoDrive(AUTO_CHEVAL_DRIVE_2 - 2000, AUTO_AIM_POS_2_L))
+							{
+								timer->Reset();
+								timer->Start();
+								autoState++;
+							}
+
+
+						break;
+					case 10: //position 2_L rough angle
+						autoShooter(SHOOT_FAR);
+						autoIntake(INTAKE_SHOOT_FAR);
+						shooter1->Set(0.f);
+						shooter2->Set(0.f);
+						m_intakeRoller->SetSpeed(0.f);
+						m_shootE->Set(false);
+						m_shootR->Set(true);
+						//m_shooterServo->SetAngle(SERVO_IN);
+						if (autoDrive(AUTO_CHEVAL_DRIVE_2 - 2000, 35) && timer->Get() > 1.0)
+							{
+								autoAimAngle = getAutoAimAngle();
+								timer->Reset();
+								timer->Start();
+								autoState = 6;
+							}
+						break;
+					/*case 8: //position 2_R extra drive
+						autoShooter(SHOOT_FAR);
+						autoIntake(INTAKE_SHOOT_FAR);
+						shooter1->Set(0.f);
+						shooter2->Set(0.f);
+						m_intakeRoller->SetSpeed(0.f);
+						m_shootE->Set(false);
+						m_shootR->Set(true);
+						//m_shooterServo->SetAngle(SERVO_IN);
+						if (autoDrive(AUTO_CHEVAL_DRIVE_2 - 2500, AUTO_AIM_POS_2_R))
+							{
+								timer->Reset();
+								timer->Start();
+								autoState++;
+							}
+
+
+						break;*/
+					case 11 : //position 2_R rough angle
+						autoShooter(SHOOT_FAR);
+						autoIntake(INTAKE_SHOOT_FAR);
+						shooter1->Set(0.f);
+						shooter2->Set(0.f);
+						m_intakeRoller->SetSpeed(0.f);
+						m_shootE->Set(false);
+						m_shootR->Set(true);
+						//m_shooterServo->SetAngle(SERVO_IN);
+						if (autoDrive(AUTO_CHEVAL_DRIVE_2, AUTO_AIM_POS_2_R) && timer->Get() > 1.0)
+							{
+								autoAimAngle = getAutoAimAngle();
+								timer->Reset();
+								timer->Start();
+								autoState = 6;
+							}
+						break;
+
+/*					case 12: //back up before shot
+						autoShooter(SHOOT_FAR);
+						autoIntake(INTAKE_SHOOT_FAR);
+						shooter1->Set(0.f);
+						shooter2->Set(0.f);
+						m_intakeRoller->SetSpeed(0.f);
+						m_shootE->Set(false);
+						m_shootR->Set(true);
+						//m_shooterServo->SetAngle(SERVO_IN);
+						if (autoDrive(AUTO_CHEVAL_DRIVE_2, 20) && timer->Get() > 0.5)
+							{
+								autoAimAngle = getAutoAimAngle();
+								timer->Reset();
+								timer->Start();
+								autoState = 3;
+							}
+						break;
+*/
+					case 13: //wait a bit before taking picture
+						autoShooter(SHOOT_FAR);
+							if(timer->Get() > 1.0){
+							autoAimAngle = getAutoAimAngle();
+
+							timer->Reset();
+							timer->Start();
+							autoState = 6;
+
+						}
+						break;
+
+					case 14: //go to home
+						shooter1->Set(0.f);
+						shooter2->Set(0.f);
+						autoShooter(HOME_SHOOTER);
+						autoIntake(HOME_INTAKE);
+						m_shootE->Set(false);
+						m_shootR->Set(true);
+						//m_shooterServo->SetAngle(SERVO_IN);
+						m_intakeRoller->SetSpeed(0.f);
+						shooterState = 10;
+						break;
+					case 15: //wait before taking shot
+						shooter1->Set(-SPEED_RPM);
+						shooter2->Set(SPEED_RPM - BALL_SPIN);
+						m_leftDrive4->SetSpeed(0.f);
+						m_leftDrive1->SetSpeed(0.f);
+						m_rightDrive2->SetSpeed(0.f);
+						m_rightDrive3->SetSpeed(0.f);
+						autoShooter(SHOOT_FAR);
+						autoIntake(INTAKE_SHOOT_FAR);
+						m_shootE->Set(false);
+						m_shootR->Set(true);
+						if(timer->Get() > 0.75){
+							timer->Reset();
+							timer->Start();
+							autoState = 7;
+						}
+
+						break;
+					}
+					break;
+	/*		case : // drive over cheval, shoot in high goal
 				printf("autoState: %d\n", autoState);
 				switch(autoState){
 				case 0:
@@ -1924,19 +2258,8 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					m_leftDrive4->SetSpeed(-0.5);
-					m_leftDrive1->SetSpeed(-0.5);
-					m_rightDrive2->SetSpeed(0.5);
-					m_rightDrive3->SetSpeed(0.5);
-					if(nav->GetRoll() < -8)
-					{
-						m_leftDrive4->SetSpeed(-0.25);
-						m_leftDrive1->SetSpeed(-0.25);
-						m_rightDrive2->SetSpeed(-0.25);
-						m_rightDrive3->SetSpeed(-0.25);
-						timer->Start();
+					if()
 						autoState++;
-					}
 					break;
 				case 2: //lower intake
 					autoShooter(HOME_SHOOTER);
@@ -2281,7 +2604,7 @@ private:
 					break;
 				}
 				break; */
-			case 7: //2-ball auto
+			case 9: //2-ball auto
 				printf("autoState: %d\n", autoState);
 				switch(autoState)
 				{

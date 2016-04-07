@@ -1,5 +1,6 @@
 #include "SimPID.h"
 #include "SimLib.h"
+#include "WPILib.h"
 
 /**
  * Initializes the SimPID object. All parameters default to 0.
@@ -22,7 +23,7 @@ SimPID::SimPID(float p, float i, float d, float epsilon)
 	m_errorSum = 0;
 	m_previousValue = 0;
 
-	IsContinuousAngle = true;
+	IsContinuousAngle = false;
 }
 
 /**
@@ -83,6 +84,8 @@ void SimPID::setErrorIncrement(int inc)
 void SimPID::setDesiredValue(int val)
 {
 	m_desiredValue = val;
+	if(IsContinuousAngle == true)
+		m_desiredValue = normal(m_desiredValue);
 }
 	
 /**
@@ -132,9 +135,11 @@ float SimPID::calcPID(float currentValue)
 	
 	// Calculate P Component.
 	float error = m_desiredValue - currentValue;
-	if(IsContinuousAngle == false)
+	if(IsContinuousAngle == true)
 		error = normal(m_desiredValue - currentValue);
 	pVal = m_p * (float)error;
+	printf("SIMPID SAYS: Target: %f, current: %f, error: %f\n", m_desiredValue, currentValue, error);
+
 	
 	// Calculate I Component.
 	// Error is positive and outside the epsilon band.
