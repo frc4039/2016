@@ -10,6 +10,8 @@
  * Added portcullis auto (untested)
  * Added CoF auto (untested)
  * If any of you mess up the tabs again I swear to god I will create my own branch
+ * April 13- BTK
+ * Trimmed auto distance constants
  */
 
 #include "WPILib.h"
@@ -81,8 +83,8 @@
 #define AUTO_OVER_OTHER -16000
 #define AUTO_OVER_ROUGH -13000
 #define AUTO_LOWBAR_DRIVE -18000
-#define AUTO_CHEVAL_DRIVE_1 3477
-#define AUTO_CHEVAL_DRIVE_2 10600
+#define AUTO_CHEVAL_DRIVE_1 4115
+#define AUTO_CHEVAL_DRIVE_2 11600
 #define AUTO_AIM_POS_1 45
 #define AUTO_AIM_POS_2_L -25
 #define AUTO_AIM_POS_2_R 35
@@ -238,8 +240,8 @@ private:
 		m_rightDrive2 = new VictorSP(2);
 		m_rightDrive3 = new VictorSP(3);
 
-		m_shiftHigh = new Solenoid(0);
-		m_shiftLow = new Solenoid(1);
+		m_shiftHigh = new Solenoid(1);
+		m_shiftLow = new Solenoid(0);
 		m_shootE = new Solenoid(2);
 		m_shootR = new Solenoid(3);
 		m_climbE = new Solenoid(4);
