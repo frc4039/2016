@@ -84,12 +84,12 @@
 //autonomous constants
 #define AUTO_OVER_MOAT -17000
 #define AUTO_OVER_OTHER -16000
-#define AUTO_OVER_ROUGH -13000
+#define AUTO_OVER_ROUGH -14000
 #define AUTO_LOWBAR_DRIVE -18000
-#define AUTO_CHEVAL_DRIVE_1 4115
-#define AUTO_CHEVAL_DRIVE_2 11600
-#define AUTO_PORTCULLIS_DRIVE_1 5000
-#define AUTO_PORTCULLIS_DRIVE_2 11600
+#define AUTO_CHEVAL_DRIVE_1 5100
+#define AUTO_CHEVAL_DRIVE_2 14000
+#define AUTO_PORTCULLIS_DRIVE_1 5500
+#define AUTO_PORTCULLIS_DRIVE_2 14000
 #define NEUTRAL_DRIVE -3000
 #define AUTO_AIM_POS_1 45
 #define AUTO_AIM_POS_2_L -25
@@ -149,6 +149,7 @@ private:
 	LiveWindow *lw = LiveWindow::GetInstance();
 
 	int autoState, autoMode, autoPosition, shooterState, pusherState, shooterState1, autoDirection;
+	int pastLeft, pastRight;
 
 	VictorSP *m_leftDrive4; //4
 	VictorSP *m_leftDrive1; //1
@@ -302,7 +303,7 @@ private:
 		turnPID2->setContinuousAngle(true);
 
 		shooterPID = new SimPID(0.0025, 0, 0.0001,10);
-		shooterPID->setMaxOutput(0.4);
+		shooterPID->setMaxOutput(0.36);
 
 
 		intakePID = new SimPID(0.001, 0, 0.001, 10);
@@ -504,8 +505,8 @@ private:
 		//if(m_shooterHomeSwitch->Get() == CLOSED)
 			//m_shooter->SetPosition(0);
 
-		//printf("\n r %f", nav->GetRoll());
-		//printf("\n p %f", nav->GetPitch());
+		printf("\n r %f", nav->GetRoll());
+		printf("\n p %f", nav->GetPitch());
 
 
 
@@ -571,7 +572,7 @@ private:
 		shooter2->Set(0.f);
 		timer->Reset();
 		timer->Start();
-		//stateTimer->Reset();
+		stateTimer->Reset();
 		stateTimer->Start();
 		IMAQdxStartAcquisition(session);
 		m_LED->Set(Relay::kForward);
@@ -1772,7 +1773,6 @@ private:
 					break;
 				case 9: //shoot the ball
 					shooter1->Set(-SPEED_RPM);
-					shooter2->Set(SPEED_RPM - BALL_SPIN);
 					autoShooter(SHOOT_FAR);
 					autoIntake(INTAKE_SHOOT_FAR);
 					m_shootE->Set(true);
@@ -1819,7 +1819,7 @@ private:
 					m_intakeRoller->SetSpeed(0.f);
 					m_shootE->Set(false);
 					m_shootR->Set(true);
-					if(autoDrive(-5000, 0))
+					if(autoDrive(NEUTRAL_DRIVE, 0))
 						autoState++;
 					break;
 				case 13: //lower intake
@@ -1904,7 +1904,7 @@ private:
 							autoState++;
 						}
 
-						if((m_leftDriveEncoder->Get() + m_rightDriveEncoder->Get())/2 < AUTO_CHEVAL_DRIVE_1 + 500 && timer->Get() > 3){
+						if((nav->GetPitch() < 13 && timer->Get() > 1.5)){
 							m_leftDrive4->SetSpeed(0.f);
 							m_leftDrive1->SetSpeed(0.f);
 							m_rightDrive2->SetSpeed(0.f);
@@ -3651,7 +3651,7 @@ private:
 
 		m_shooter->Set(-rotate);
 
-		printf("shooter rotate power: %f \t error: %d \t target: %d \n", rotate, currentTicks - ticks, ticks);
+		//printf("shooter rotate power: %f \t error: %d \t target: %d \n", rotate, currentTicks - ticks, ticks);
 
 		return shooterPID->isDone();
 	}
@@ -3667,7 +3667,7 @@ private:
 
 			m_intake->Set(-rotate);
 
-		printf("intake rotate power: %f \t error: %d \t target: %d \n", rotate, currentTicks - ticks, ticks);
+		//printf("intake rotate power: %f \t error: %d \t target: %d \n", rotate, currentTicks - ticks, ticks);
 
 			return intakePID->isDone();
 		}
@@ -3691,6 +3691,20 @@ private:
 
 		return drivePID->isDone() && turnPID->isDone();
 	}
+
+
+
+/*	void updatePosition(void)
+	{
+		float currentAngle = nav->GetYaw();
+		int currentX = (m_rightDriveEncoder->Get() + m_leftDriveEncoder->Get())/2*cos(currentAngle);
+		int currentY =
+	}
+
+	bool advancedAutoDrive()
+	{
+
+	}*/
 
 	void manualServo(void){
 		if(m_Joystick->GetRawButton(2))
@@ -3837,7 +3851,7 @@ private:
 			if (num_particlesFound == 0){
 				//unable to find target
 				DriverStation::ReportError("ERROR! Target not found!\n");
-				imaqDrawShapeOnImage(frame, frame, {0, IMAGE_CENTER+AIM_CORRECTION, RES_Y-1, 1}, IMAQ_DRAW_VALUE, IMAQ_SHAPE_RECT, 0.0f);
+				imaqDrawShapeOnImage(frame, frame, {0, IMAGE_CENTER+AIM_CORRECTION, RES_Y-1, 1}, IMAQ_DRAW_INVERT, IMAQ_SHAPE_RECT, 255.0f);
 				if (m_Joystick->GetRawButton(11))
 					CameraServer::GetInstance()->SetImage(processed);
 				else
