@@ -1,5 +1,5 @@
 function vision
-    raw = imread('sampleImages/03-14/pic3.bmp');
+    raw = imread('sampleImages/03-17/pic8.bmp');
     %colormap(map);
     L = 480;
     W = 640;
