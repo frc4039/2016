@@ -30,6 +30,7 @@ for i=0:0.1:5
     if abs(result) < min(1)
         min = [abs(result), i];
     end
+    
 end
 y2 = subs(Nm, t, min(2))*(x2 - x(min(2))) + y(min(2));
 plot(x2,y2, 'r', 'Linewidth', 1);
