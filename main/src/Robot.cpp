@@ -44,8 +44,8 @@
 //servo and sensor constants
 #define OPEN 1
 #define CLOSED 0
-#define SERVO_IN 90
-#define SERVO_OUT 45
+#define SERVO_IN 0
+#define SERVO_OUT 90
 
 //current shooter constants
 //#define SPEED_RPM 6500
@@ -159,7 +159,6 @@ private:
 
 	VictorSP *m_climber;
 	VictorSP *m_intakeRoller;
-	VictorSP *m_PD;
 
 	CANTalon *shooter1, *shooter2, *m_shooter, *m_intake;
 
@@ -255,7 +254,7 @@ private:
 		m_climbE = new Solenoid(4);
 		m_climbR = new Solenoid(5);
 
-		m_shooterServo = new Servo(6);
+		m_shooterServo = new Servo(9);
 
 		m_Joystick = new Joystick(0);
 		m_Gamepad = new Joystick(1);
@@ -282,8 +281,6 @@ private:
 		shooter2->SetAllowableClosedLoopErr(1000);
 
 		m_intakeRoller = new VictorSP(8);
-
-		m_PD = new VictorSP(7);
 
 		m_LED = new Relay(0);
 
@@ -2940,7 +2937,7 @@ private:
 		operateShifter();
 		operateClimber();
 		advancedShoot();
-		//shootTemp();
+		manualServo();		//shootTemp();
 		//simpleShoot();
 		//pusher();
 		//simpleIntake();
@@ -3065,11 +3062,11 @@ private:
 
 	}
 
-	inline void operatePD(void){
+	/*inline void operatePD(void){
 		motorSpeed = -m_Gamepad->GetRawAxis(2) + m_Gamepad->GetRawAxis(3);
 
 		m_PD->Set(motorSpeed);
-	}
+	}*/
 
 	inline void operateShifter(void){
 		if(m_Joystick->GetRawButton(1) || m_Gamepad2->GetRawButton(GP_R)){
