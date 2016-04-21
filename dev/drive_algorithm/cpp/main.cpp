@@ -27,7 +27,7 @@ int main(){
 
 	float left, right;
 	int x = 0, y = 0;
-	robot->initPath(auto1);
+	robot->initPath(auto1, PathForward);
 	robot->followPath(x, y, &left, &right);
 
 	return 0;
