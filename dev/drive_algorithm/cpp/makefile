@@ -1,4 +1,4 @@
-obj = main.cpp line.cpp path.cpp curve.cpp
+obj = main.cpp line.cpp path.cpp curve.cpp pathfollower.cpp
 CC = g++
 CFLAGS = 
 
