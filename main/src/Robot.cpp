@@ -15,6 +15,9 @@
  *
  * April 14
  * Fixed up auto modes, added portcullis distance constant, added operateProtectiveDevice function (untested)
+ *
+ * April 21- LW
+ * Added code for PD Servos, functions, variables, constants
  */
 
 #include "WPILib.h"
@@ -44,8 +47,10 @@
 //servo and sensor constants
 #define OPEN 1
 #define CLOSED 0
-#define SERVO_IN 0
-#define SERVO_OUT 90
+#define SERVO_IN_1 0
+#define SERVO_OUT_1 90
+#define SERVO_IN_2 0
+#define SERVO_OUT_2 90
 
 //current shooter constants
 //#define SPEED_RPM 6500
@@ -148,7 +153,7 @@ class Robot: public IterativeRobot
 private:
 	LiveWindow *lw = LiveWindow::GetInstance();
 
-	int autoState, autoMode, autoPosition, shooterState, pusherState, shooterState1, autoDirection;
+	int autoState, autoMode, autoPosition, shooterState, pusherState, shooterState1, autoDirection, servoState;
 	int pastLeft, pastRight;
 
 	VictorSP *m_leftDrive4; //4
@@ -170,7 +175,8 @@ private:
 	Solenoid *m_shootE, *m_shootR;
 	Solenoid *m_climbE, *m_climbR;
 
-	Servo *m_shooterServo;
+	Servo *m_PDServo1;
+	Servo *m_PDServo2;
 
 	SimPID *drivePID;
 	SimPID *turnPID;
@@ -254,7 +260,8 @@ private:
 		m_climbE = new Solenoid(4);
 		m_climbR = new Solenoid(5);
 
-		m_shooterServo = new Servo(9);
+		m_PDServo1 = new Servo(9);
+		m_PDServo2 = new Servo(7);
 
 		m_Joystick = new Joystick(0);
 		m_Gamepad = new Joystick(1);
@@ -2930,6 +2937,7 @@ private:
 		timer->Reset();
 		timer->Start();
 		time = timer->Get();
+		pressTimer->Start();
 	}
 
 	void TeleopPeriodic(void)
@@ -2937,7 +2945,7 @@ private:
 		operateShifter();
 		operateClimber();
 		advancedShoot();
-		manualServo();		//shootTemp();
+		advancedServo();		//shootTemp();
 		//simpleShoot();
 		//pusher();
 		//simpleIntake();
@@ -3079,17 +3087,6 @@ private:
 		}
 	}
 
-	inline void simpleShoot(void){
-		if (m_Gamepad->GetRawButton(GP_Y)){
-			m_shootE->Set(true);
-			m_shootR->Set(false);
-		}
-		else{
-			m_shootE->Set(false);
-			m_shootR->Set(true);
-		}
-	}
-
 	void advancedShoot(void)
 	{
 		//printf("Shooter State: %d\n", shooterState);
@@ -3130,13 +3127,13 @@ private:
 			autoIntake(HOME_INTAKE);
 			//m_intakeRoller->SetSpeed(0.f);
 
-			if (m_Gamepad->GetRawButton(GP_Y))
+			/*if (m_Gamepad->GetRawButton(GP_Y))
 			{
 				shooterState = 49;
 				timer->Reset();
 				timer->Start();
-			}
-			else if(m_Gamepad->GetPOV() == GP_UP)
+			}*/
+			if(m_Gamepad->GetPOV() == GP_UP)
 				shooterState = 20;
 			else if(m_Gamepad->GetRawButton(GP_B))
 				{
@@ -3201,17 +3198,17 @@ private:
 				//shooterState = 31;
 
 			else if(m_Gamepad->GetRawButton(GP_B))
-				{
-					shooterState = 40;
-					timer->Reset();
-					timer->Start();
-				}
+			{
+				shooterState = 40;
+				timer->Reset();
+				timer->Start();
+			}
 			else if(m_Gamepad->GetRawButton(GP_X))
-				{
-					shooterState = 71;
-					timer->Reset();
-					timer->Start();
-				}
+			{
+				shooterState = 71;
+				timer->Reset();
+				timer->Start();
+			}
 			break;
 
 
@@ -3238,13 +3235,13 @@ private:
 				timer->Start();
 
 			}
-			else if(m_Gamepad->GetRawButton(GP_Y) && timer->Get() > 0.5)
+			/*else if(m_Gamepad->GetRawButton(GP_Y) && timer->Get() > 0.5)
 			{
 				shooterState = 49;
 				timer->Reset();
 				timer->Start();
 
-			}
+			}*/
 			else if(m_Gamepad->GetRawButton(GP_X) && timer->Get() > 0.5)
 			{
 				shooterState = 71;
@@ -3321,8 +3318,8 @@ private:
 				timer->Reset();
 				timer->Start();
 			}
-			else if(m_Gamepad->GetRawButton(GP_Y))
-				shooterState = 61;
+		/*	else if(m_Gamepad->GetRawButton(GP_Y))
+				shooterState = 61;*/
 			break;
 
 		case 61: //shoot close position
@@ -3703,11 +3700,29 @@ private:
 
 	}*/
 
-	void manualServo(void){
-		if(m_Joystick->GetRawButton(2))
-			m_shooterServo->SetAngle(SERVO_OUT);
-		else
-			m_shooterServo->SetAngle(SERVO_IN);
+	void advancedServo(void)
+	{
+		switch(servoState)
+		{
+		case 0:
+			m_PDServo1->SetAngle(SERVO_IN_1);
+			m_PDServo2->SetAngle(SERVO_IN_2);
+			if(m_Gamepad->GetRawButton(GP_Y) && pressTimer->Get() > 0.5)
+			{
+				servoState++;
+				pressTimer->Reset();
+			}
+			break;
+		case 1:
+			m_PDServo1->SetAngle(SERVO_OUT_1);
+			m_PDServo2->SetAngle(SERVO_OUT_2);
+			if(m_Gamepad->GetRawButton(GP_Y) && pressTimer->Get() > 0.5)
+			{
+				servoState--;
+				pressTimer->Reset();
+			}
+			break;
+		}
 	}
 
 	//===============================================VISION FUNCTIONS=============================================
@@ -4029,4 +4044,5 @@ private:
 	}
 
 };
+
 START_ROBOT_CLASS(Robot)
