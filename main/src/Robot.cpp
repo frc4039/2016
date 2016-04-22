@@ -77,14 +77,15 @@
 
 //miscellaneous constants
 #define PUSHER_SPEED 0.25
-#define ROLLER_SPEED -0.5
+#define ROLLER_SPEED -0.65
 #define PRACTICE_DRIVE_LIMIT 1
 #define PI 3.141592653589793f
 
 //autonomous constants
 #define AUTO_OVER_MOAT -17000
 #define AUTO_OVER_OTHER -16000
-#define AUTO_OVER_ROUGH -14000
+#define AUTO_OVER_ROUGH -17000
+//#define AUTO_OVER_ROUGH -14000
 #define AUTO_LOWBAR_DRIVE -18000
 #define AUTO_CHEVAL_DRIVE_1 5100
 #define AUTO_CHEVAL_DRIVE_2 14000
@@ -1064,6 +1065,7 @@ private:
 						autoState++;
 					break;
 				case 15: //lower intake
+					shooterState = 20;
 					shooter1->Set(0.f);
 					shooter2->Set(0.f);
 					autoShooter(HOME_SHOOTER);
@@ -1338,6 +1340,7 @@ private:
 						autoState++;
 					break;
 				case 15: //lower intake
+					shooterState = 20;
 					shooter1->Set(0.f);
 					shooter2->Set(0.f);
 					autoShooter(HOME_SHOOTER);
@@ -1612,6 +1615,7 @@ private:
 						autoState++;
 					break;
 				case 15: //lower intake
+					shooterState = 20;
 					shooter1->Set(0.f);
 					shooter2->Set(0.f);
 					autoShooter(HOME_SHOOTER);
