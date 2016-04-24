@@ -11,8 +11,8 @@ int main(){
 	int start[2] = {0,0};
 	int end[2] = {16000,0};
 	int c2[2] = {8000, 0};
-	int c3[2] = {12000, 5000};
-	int c4[2] = {0, 5000};
+	int c3[2] = {16000, -5000};
+	int c4[2] = {0, -5000};
 
 	auto1 = new Line(start,end, 100);
 	auto1->calculate();
