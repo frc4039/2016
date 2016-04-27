@@ -1912,7 +1912,7 @@ private:
 							autoState++;
 						}
 
-						if((nav->GetPitch() < 13 && timer->Get() > 1.5)){
+						else if((nav->GetPitch() < 13 && (m_leftDriveEncoder->Get() + m_rightDriveEncoder->Get())/2 < AUTO_CHEVAL_DRIVE_1 + 500 && timer->Get() > 1.5)){
 							m_leftDrive4->SetSpeed(0.f);
 							m_leftDrive1->SetSpeed(0.f);
 							m_rightDrive2->SetSpeed(0.f);
