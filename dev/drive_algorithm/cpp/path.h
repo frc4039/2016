@@ -10,6 +10,9 @@ public:
 	virtual void calculate() = 0;
 	void add(Path* partOfPath);
 	void show();
+	int* getPoint(int i);
+
+
 };
 
 #endif

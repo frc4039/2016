@@ -14,6 +14,7 @@ private:
 	int posX, posY;
 	int lastX, lastY;
 	int nextPoint;
+	float angle;
 	PathDirection direction;
 	float distanceToEnd;
 	float maxSpeed;
@@ -21,11 +22,14 @@ private:
 	float leftSpeed, rightSpeed;
 	void driveToPoint(void);
 	float distanceP;
+	float turnP;
+	float turnSpeed;
+	float normalize(float normalAngle);
 
 public:
 	PathFollower();
 	void initPath(Path *nPath, PathDirection nDirection);
-	void followPath(int nPosX, int nPosY, float *nLeftSpeed, float *nRightSpeed);
+	void followPath(int nPosX, int nPosY, float nAngle float *nLeftSpeed, float *nRightSpeed);
 	void setSpeed(float nMaxSpeed, float nP);
 
 };

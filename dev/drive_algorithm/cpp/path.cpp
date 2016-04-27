@@ -37,3 +37,6 @@ void Path::show(void){
 		printf("%d,%d\n",path[i][0],path[i][1]);
 }
 
+int* Path::getPoint(int i){
+	return path[i];
+}

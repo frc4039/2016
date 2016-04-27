@@ -28,7 +28,13 @@ int main(){
 	float left, right;
 	int x = 0, y = 0;
 	robot->initPath(auto1, PathForward);
-	robot->followPath(x, y, &left, &right);
+
+	while (robot->followPath(x, y, nav->GetYaw(), &left, &right) == 0){
+		leftDrive->set(left)
+
+		//updatePos();
+
+	}
 
 	return 0;
 }
