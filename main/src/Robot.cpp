@@ -47,10 +47,10 @@
 //servo and sensor constants
 #define OPEN 1
 #define CLOSED 0
-#define SERVO_IN_1 0
-#define SERVO_OUT_1 90
-#define SERVO_IN_2 0
-#define SERVO_OUT_2 90
+#define SERVO_IN_1 160
+#define SERVO_IN_2 20
+#define SERVO_OUT_1 20
+#define SERVO_OUT_2 160
 
 //current shooter constants
 //#define SPEED_RPM 6500
@@ -96,6 +96,7 @@
 #define AUTO_CHEVAL_DRIVE_2 14000
 #define AUTO_PORTCULLIS_DRIVE_1 5500
 #define AUTO_PORTCULLIS_DRIVE_2 14000
+#define POS_2_EXTRA -2200
 #define NEUTRAL_DRIVE -3000
 #define AUTO_AIM_POS_1 45
 #define AUTO_AIM_POS_2_L -25
@@ -156,6 +157,8 @@ private:
 
 	int autoState, autoMode, autoPosition, shooterState, pusherState, shooterState1, autoDirection, servoState;
 	int pastLeft, pastRight;
+
+	char autoFailSafe;
 
 	VictorSP *m_leftDrive4; //4
 	VictorSP *m_leftDrive1; //1
@@ -254,8 +257,8 @@ private:
 		m_rightDrive2 = new VictorSP(2);
 		m_rightDrive3 = new VictorSP(3);
 
-		m_shiftHigh = new Solenoid(1);
-		m_shiftLow = new Solenoid(0);
+		m_shiftHigh = new Solenoid(0);
+		m_shiftLow = new Solenoid(1);
 		m_shootE = new Solenoid(2);
 		m_shootR = new Solenoid(3);
 		m_climbE = new Solenoid(4);
@@ -298,10 +301,11 @@ private:
 
 		turnPID = new SimPID(0.075, 0, 0, 5);
 		turnPID->setMinDoneCycles(1);
+		turnPID->setMinOutput(0.12);
 		turnPID->setMaxOutput(0.5);
 		turnPID->setContinuousAngle(true);
 
-		turnPID2 = new SimPID(0.058 ,0.06,0.0,0.75);
+		turnPID2 = new SimPID(0.054 ,0.06,0.0,0.75);
 		turnPID2->setMinDoneCycles(10);
 		turnPID2->setMaxOutput(0.5);
 		turnPID2->setMinOutput(0.12);
@@ -357,6 +361,7 @@ private:
 		autoPosition = 0;
 		pusherState = 0;
 		aim_fly_trim = 0;
+		servoState = 0;
 	}
 
 	void CameraSettings(void){
@@ -570,6 +575,7 @@ private:
 	void AutonomousInit(void)
 	{
 		autoState = 0;
+		autoFailSafe = 0;
 		nav->Reset();
 		m_leftDriveEncoder->Reset();
 		m_rightDriveEncoder->Reset();
@@ -859,7 +865,7 @@ private:
 							autoDrive(AUTO_OVER_OTHER, AUTO_AIM_POS_2_L);
 							break;
 						case 1:
-							autoDrive(AUTO_OVER_OTHER, AUTO_AIM_POS_2_R);
+							autoDrive(AUTO_OVER_OTHER + POS_2_EXTRA, 0);
 							break;
 
 						}
@@ -1010,7 +1016,7 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					if (autoDrive(AUTO_OVER_OTHER, AUTO_AIM_POS_2_R) && timer->Get() > 1.0)
+					if (autoDrive(AUTO_OVER_OTHER + POS_2_EXTRA, AUTO_AIM_POS_2_R) && timer->Get() > 1.0)
 						{
 							autoAimAngle = getAutoAimAngle();
 							timer->Reset();
@@ -1134,7 +1140,7 @@ private:
 							autoDrive(AUTO_OVER_MOAT, AUTO_AIM_POS_2_L);
 							break;
 						case 1:
-							autoDrive(AUTO_OVER_MOAT, AUTO_AIM_POS_2_R);
+							autoDrive(AUTO_OVER_MOAT + POS_2_EXTRA, 0);
 							break;
 
 						}
@@ -1285,7 +1291,7 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					if (autoDrive(AUTO_OVER_MOAT, AUTO_AIM_POS_2_R) && timer->Get() > 1.0)
+					if (autoDrive(AUTO_OVER_MOAT + POS_2_EXTRA, AUTO_AIM_POS_2_R) && timer->Get() > 1.0)
 						{
 							autoAimAngle = getAutoAimAngle();
 							timer->Reset();
@@ -1409,7 +1415,7 @@ private:
 							autoDrive(AUTO_OVER_ROUGH, AUTO_AIM_POS_2_L);
 							break;
 						case 1:
-							autoDrive(AUTO_OVER_ROUGH, AUTO_AIM_POS_2_R);
+							autoDrive(AUTO_OVER_ROUGH + POS_2_EXTRA, 0);
 							break;
 
 						}
@@ -1560,7 +1566,7 @@ private:
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
-					if (autoDrive(AUTO_OVER_ROUGH, AUTO_AIM_POS_2_R) && timer->Get() > 1.0)
+					if (autoDrive(AUTO_OVER_ROUGH + POS_2_EXTRA, AUTO_AIM_POS_2_R) && timer->Get() > 1.0)
 						{
 							autoAimAngle = getAutoAimAngle();
 							timer->Reset();
@@ -1831,6 +1837,7 @@ private:
 						autoState++;
 					break;
 				case 13: //lower intake
+					shooterState = 20;
 					autoIntake(PICKUP);
 					autoShooter(HOME_SHOOTER);
 					m_intakeRoller->SetSpeed(0.f);
@@ -1912,7 +1919,10 @@ private:
 							autoState++;
 						}
 
-						else if((nav->GetPitch() < 13 && (m_leftDriveEncoder->Get() + m_rightDriveEncoder->Get())/2 < AUTO_CHEVAL_DRIVE_1 + 500 && timer->Get() > 1.5)){
+						if(nav->GetPitch() > 13)
+							autoFailSafe = 1;
+
+						if((autoFailSafe == 0 && timer->Get() > 1.5)){
 							m_leftDrive4->SetSpeed(0.f);
 							m_leftDrive1->SetSpeed(0.f);
 							m_rightDrive2->SetSpeed(0.f);
@@ -1952,7 +1962,7 @@ private:
 								autoDrive(AUTO_CHEVAL_DRIVE_2, AUTO_AIM_POS_2_L + 180);
 								break;
 							case 1:
-								autoDrive(AUTO_CHEVAL_DRIVE_2, AUTO_AIM_POS_2_R + 180);
+								autoDrive(AUTO_CHEVAL_DRIVE_2 + POS_2_EXTRA, 180);
 								break;
 
 							}
@@ -2103,7 +2113,7 @@ private:
 						m_shootE->Set(false);
 						m_shootR->Set(true);
 						//m_shooterServo->SetAngle(SERVO_IN);
-						if (autoDrive(AUTO_CHEVAL_DRIVE_2, AUTO_AIM_POS_2_R) && timer->Get() > 1.0)
+						if (autoDrive(AUTO_CHEVAL_DRIVE_2 + POS_2_EXTRA, AUTO_AIM_POS_2_R + 180) && timer->Get() > 1.0)
 							{
 								autoAimAngle = getAutoAimAngle();
 								timer->Reset();
@@ -2281,7 +2291,7 @@ private:
 								autoDrive(AUTO_PORTCULLIS_DRIVE_2, AUTO_AIM_POS_2_L + 180);
 								break;
 							case 1:
-								autoDrive(AUTO_PORTCULLIS_DRIVE_2, AUTO_AIM_POS_2_R + 180);
+								autoDrive(AUTO_PORTCULLIS_DRIVE_2 + POS_2_EXTRA, 180);
 								break;
 
 							}
@@ -2432,7 +2442,7 @@ private:
 						m_shootE->Set(false);
 						m_shootR->Set(true);
 						//m_shooterServo->SetAngle(SERVO_IN);
-						if (autoDrive(AUTO_PORTCULLIS_DRIVE_2, AUTO_AIM_POS_2_R) && timer->Get() > 1.0)
+						if (autoDrive(AUTO_PORTCULLIS_DRIVE_2 + POS_2_EXTRA, AUTO_AIM_POS_2_R + 180) && timer->Get() > 1.0)
 							{
 								autoAimAngle = getAutoAimAngle();
 								timer->Reset();
@@ -2941,6 +2951,7 @@ private:
 		timer->Reset();
 		timer->Start();
 		time = timer->Get();
+		pressTimer->Reset();
 		pressTimer->Start();
 	}
 
@@ -3706,26 +3717,16 @@ private:
 
 	void advancedServo(void)
 	{
-		switch(servoState)
+		if(m_Joystick->GetRawButton(2))
 		{
-		case 0:
-			m_PDServo1->SetAngle(SERVO_IN_1);
-			m_PDServo2->SetAngle(SERVO_IN_2);
-			if(m_Gamepad->GetRawButton(GP_Y) && pressTimer->Get() > 0.5)
-			{
-				servoState++;
-				pressTimer->Reset();
-			}
-			break;
-		case 1:
 			m_PDServo1->SetAngle(SERVO_OUT_1);
 			m_PDServo2->SetAngle(SERVO_OUT_2);
-			if(m_Gamepad->GetRawButton(GP_Y) && pressTimer->Get() > 0.5)
-			{
-				servoState--;
-				pressTimer->Reset();
-			}
-			break;
+		}
+		else
+		{
+			m_PDServo1->SetAngle(SERVO_IN_1);
+			m_PDServo2->SetAngle(SERVO_IN_2);
+
 		}
 	}
 
