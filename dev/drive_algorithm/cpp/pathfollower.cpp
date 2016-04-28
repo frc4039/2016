@@ -3,8 +3,6 @@
 #include <stdio.h>
 #include "SimPID.h"
 
-
-
 PathFollower::PathFollower(){
 	posX = posY = 0;
 	lastX = lastY = 0;
@@ -21,25 +19,6 @@ void PathFollower::initPath(Path *nPath, PathDirection nDirection){
 	pointPID = new SimPID;
 }
 
-bool autoDrive(int distance, int angle)
-	{
-		int currentDist = (m_rightDriveEncoder->Get() + m_leftDriveEncoder->Get()) / 2;
-		int currentAngle = nav->GetYaw();
-
-		drivePID->setDesiredValue(distance);
-		turnPID->setDesiredValue(angle);
-
-		float drive = -drivePID->calcPID(currentDist);
-		float turn = -turnPID->calcPID(currentAngle);
-
-		m_rightDrive2->SetSpeed(-(limit(drive - turn, 1)));
-		m_rightDrive3->SetSpeed(-(limit(drive - turn, 1)));
-		m_leftDrive4->SetSpeed(limit(drive + turn, 1));
-		m_leftDrive1->SetSpeed(limit(drive + turn, 1));
-
-		return drivePID->isDone() && turnPID->isDone();
-	}
-
 void PathFollower::driveToPoint(void){
 	//drives to a given point
 	//calculates drive output for distance and turn
@@ -47,14 +26,24 @@ void PathFollower::driveToPoint(void){
 	//total speed given by PID to endpoint, not target point
 
 	int* nextCoordinate = path->getPoint(nextPoint);
-	float desiredAngle = atan2(nextCoordinate[1] - posY, nextCoordinate[0] - posX);
-	turnSpeed = turnP*normalize(desiredAngle - angle);
 
+	float desiredAngle = atan2(nextCoordinate[1] - posY, nextCoordinate[0] - posX);
+
+	turnSpeed = turnP*normalize(desiredAngle - angle);
 
 }
 
 float PathFollower::normalize(float normalAngle){
-	if(desired Angle)
+
+	if(normalAngle > 180)
+
+		normalAngle -= 360;
+
+	else if(normalAngle < -180)
+
+		normalAngle += 360;
+
+	return normalAngle;
 }
 
 void PathFollower::setSpeed(float nMaxSpeed, float nP){
