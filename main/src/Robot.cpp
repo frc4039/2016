@@ -48,15 +48,15 @@
 #define OPEN 1
 #define CLOSED 0
 #define SERVO_IN_1 160
-#define SERVO_IN_2 20
+#define SERVO_IN_2 180
 #define SERVO_OUT_1 20
-#define SERVO_OUT_2 160
+#define SERVO_OUT_2 0
 
 //current shooter constants
-//#define SPEED_RPM 6500
-#define SPEED_RPM 1600
-#define SPEED_RPM_LOW 1100
-//#define SPEED_RPM_LOW 3900
+#define SPEED_RPM 6625 //6500
+//#define SPEED_RPM 1600
+//#define SPEED_RPM_LOW 1100
+#define SPEED_RPM_LOW 3900
 #define BALL_SPIN ((int)(SPEED_RPM*0.3))
 
 //legacy shooter constants
@@ -82,7 +82,8 @@
 
 //miscellaneous constants
 #define PUSHER_SPEED 0.25
-#define ROLLER_SPEED -0.65
+#define ROLLER_SPEED_IN -0.65
+#define ROLLER_SPEED_OUT -0.2
 #define PRACTICE_DRIVE_LIMIT 1
 #define PI 3.141592653589793f
 
@@ -110,7 +111,7 @@
 //VISION SETTINGS, READ CAREFULLY
 //left right trim for robot aim in pixels
 //try this first if change is needed
-#define AIM_CORRECTION 30
+#define AIM_CORRECTION 47
 //tells robot to save the pictures it takes when trying to shoot
 //comment out to not save pictures
 #define SAVE_SHOT_PICTURES
@@ -743,7 +744,7 @@ private:
 					m_shootR->Set(true);
 
 					autoIntake(PICKUP);
-					m_intakeRoller->SetSpeed(ROLLER_SPEED);
+					m_intakeRoller->SetSpeed(ROLLER_SPEED_IN);
 
 					if(timer->Get() > 2.0)
 					{
@@ -1705,7 +1706,7 @@ private:
 					autoIntake(TRANSFER);
 					shooter1->Set(SPEED_RPM/6);
 					shooter2->Set(-SPEED_RPM/6);
-					m_intakeRoller->SetSpeed(-ROLLER_SPEED);
+					m_intakeRoller->SetSpeed(-ROLLER_SPEED_IN);
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
@@ -1800,6 +1801,7 @@ private:
 					}
 					break;
 				case 10: //turn off shooter
+					shooterState = 20;
 					shooter1->Set(0.f);
 					shooter2->Set(0.f);
 					autoShooter(HOME_SHOOTER);
@@ -1837,7 +1839,6 @@ private:
 						autoState++;
 					break;
 				case 13: //lower intake
-					shooterState = 20;
 					autoIntake(PICKUP);
 					autoShooter(HOME_SHOOTER);
 					m_intakeRoller->SetSpeed(0.f);
@@ -1852,7 +1853,8 @@ private:
 					printf("autoState: %d\n", autoState);
 					switch(autoState){
 					case 0:
-						drivePID->setMaxOutput(0.3);
+						drivePID->setMinOutput(0.15);
+						drivePID->setMaxOutput(0.5);
 						m_leftDrive4->SetSpeed(0.f);
 						m_leftDrive1->SetSpeed(0.f);
 						m_rightDrive2->SetSpeed(0.f);
@@ -2187,7 +2189,8 @@ private:
 					printf("autoState: %d\n", autoState);
 					switch(autoState){
 					case 0:
-						drivePID->setMaxOutput(0.4);
+						drivePID->setMinOutput(0.15);
+						drivePID->setMaxOutput(0.5);
 						m_leftDrive4->SetSpeed(0.f);
 						m_leftDrive1->SetSpeed(0.f);
 						m_rightDrive2->SetSpeed(0.f);
@@ -2535,7 +2538,7 @@ private:
 					shooter2->Set(0.f);
 					m_shootE->Set(true);
 					m_shootR->Set(false);
-					m_intakeRoller->Set(-ROLLER_SPEED);
+					m_intakeRoller->Set(-ROLLER_SPEED_IN);
 					//m_shooterServo->SetAngle(SERVO_IN);
 					if(timer->Get() > 3.0)
 					{
@@ -2575,7 +2578,7 @@ private:
 					autoIntake(TRANSFER);
 					shooter1->Set(0.f);
 					shooter2->Set(0.f);
-					m_intakeRoller->SetSpeed(-ROLLER_SPEED);
+					m_intakeRoller->SetSpeed(-ROLLER_SPEED_IN);
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
@@ -2651,7 +2654,7 @@ private:
 					shooter2->Set(0.f);
 					autoShooter(HOME_SHOOTER);
 					autoIntake(PICKUP);
-					m_intakeRoller->Set(-ROLLER_SPEED);
+					m_intakeRoller->Set(-ROLLER_SPEED_IN);
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					if(autoDrive(0, 0))
@@ -2688,7 +2691,7 @@ private:
 					autoIntake(TRANSFER);
 					shooter1->Set(0.f);
 					shooter2->Set(0.f);
-					m_intakeRoller->SetSpeed(-ROLLER_SPEED);
+					m_intakeRoller->SetSpeed(-ROLLER_SPEED_IN);
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					//m_shooterServo->SetAngle(SERVO_IN);
@@ -2813,7 +2816,7 @@ private:
 					autoIntake(INTAKE_SHOOT_FAR);
 					shooter1->Set(SHOOT_SPEED);
 					shooter2->Set(SHOOT_SPEED);
-					m_intakeRoller->SetSpeed(ROLLER_SPEED);
+					m_intakeRoller->SetSpeed(ROLLER_SPEED_IN);
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					if(timer->Get() > 1)
@@ -2850,7 +2853,7 @@ private:
 					autoIntake(PICKUP);
 					shooter1->Set(0.f);
 					shooter2->Set(0.f);
-					m_intakeRoller->SetSpeed(ROLLER_SPEED);
+					m_intakeRoller->SetSpeed(ROLLER_SPEED_IN);
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					if(autoDrive(0, 0))
@@ -2884,7 +2887,7 @@ private:
 					autoIntake(HOME_INTAKE);
 					shooter1->Set(0.f);
 					shooter2->Set(0.f);
-					m_intakeRoller->SetSpeed(ROLLER_SPEED);
+					m_intakeRoller->SetSpeed(ROLLER_SPEED_IN);
 					m_shootE->Set(false);
 					m_shootR->Set(true);
 					if(timer->Get() > 0.5)
@@ -3107,9 +3110,9 @@ private:
 		//printf("Shooter State: %d\n", shooterState);
 		//printf("gamepad dY: %d\n", m_Gamepad->GetPOV(0));
 		if(m_Gamepad->GetRawButton(GP_L) && shooterState != 50)
-			m_intakeRoller->SetSpeed(ROLLER_SPEED);
+			m_intakeRoller->SetSpeed(ROLLER_SPEED_OUT);
 		else if(m_Gamepad->GetRawButton(GP_R) && shooterState != 50)
-			m_intakeRoller->SetSpeed(-ROLLER_SPEED);
+			m_intakeRoller->SetSpeed(-ROLLER_SPEED_IN);
 		else
 			m_intakeRoller->SetSpeed(0);
 
@@ -3274,7 +3277,7 @@ private:
 
 
 			autoIntake(TRANSFER);
-			m_intakeRoller->SetSpeed(-ROLLER_SPEED);
+			m_intakeRoller->SetSpeed(-ROLLER_SPEED_IN);
 
 			if(timer->Get() > 0.75)
 			{
@@ -3293,9 +3296,9 @@ private:
 			m_shootE->Set(false);
 			m_shootR->Set(true);
 
-			m_intakeRoller->SetSpeed(-ROLLER_SPEED);
+			m_intakeRoller->SetSpeed(-ROLLER_SPEED_IN);
 			autoIntake(TRANSFER);
-			//m_intakeRoller->SetSpeed(-ROLLER_SPEED);
+			//m_intakeRoller->SetSpeed(-ROLLER_SPEED_IN);
 
 			if(timer->Get() > 0.5)
 			{
