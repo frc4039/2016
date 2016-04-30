@@ -111,7 +111,7 @@
 //VISION SETTINGS, READ CAREFULLY
 //left right trim for robot aim in pixels
 //try this first if change is needed
-#define AIM_CORRECTION 47
+#define AIM_CORRECTION 50
 //tells robot to save the pictures it takes when trying to shoot
 //comment out to not save pictures
 #define SAVE_SHOT_PICTURES
