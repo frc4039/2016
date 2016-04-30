@@ -2,6 +2,7 @@
 #include "path.h"
 #include <stdio.h>
 #include "SimPID.h"
+#include "math.h"
 
 
 
@@ -51,11 +52,18 @@ void PathFollower::setSpeed(float nMaxSpeed, float nP){
 	distanceP = nP;
 }
 
+#define SQ(X) ((X)*(X))
+
+
 void PathFollower::followPath(int nPosX, int nPosY, float nAngle, float *nLeftSpeed, float *nRightSpeed){
 	posX = nPosX;
 	posY = nPosY;
 	angle = nAngle;
 	driveToPoint();
+
+	driveSpeed = distanceP*sqrt((SQ(path->getEndpoint()[0]-posX) + SQ(path->getEndpoint()[1]-posY)));
+
+
 	//following is acheived by using the drive to point function
 	//the robot attempts to drive to a point and when it gets close we move the point
 	//to the next point on the path

@@ -29,10 +29,10 @@ int main(){
 	int x = 0, y = 0;
 	robot->initPath(auto1, PathForward);
 
-	while (robot->followPath(x, y, nav->GetYaw(), &left, &right) == 0){
+	while (robot->followPath(nav->GetYaw(), &left, &right) == 0){
 		leftDrive->set(left)
 
-		//updatePos();
+	robot->updatePos();
 
 	}
 
