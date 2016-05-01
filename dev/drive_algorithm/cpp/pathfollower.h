@@ -29,8 +29,9 @@ private:
 public:
 	PathFollower();
 	void initPath(Path *nPath, PathDirection nDirection);
-	void followPath(int nPosX, int nPosY, float nAngle float *nLeftSpeed, float *nRightSpeed);
+	int followPath(int nPosX, int nPosY, float nAngle, float *nLeftSpeed, float *nRightSpeed);
 	void setSpeed(float nMaxSpeed, float nP);
+	void updatePos(void);
 
 };
 
