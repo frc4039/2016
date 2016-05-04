@@ -53,7 +53,7 @@
 #define SERVO_OUT_2 0
 
 //current shooter constants
-#define SPEED_RPM 6625 //6500
+#define SPEED_RPM 6675 //6500
 //#define SPEED_RPM 1600
 //#define SPEED_RPM_LOW 1100
 #define SPEED_RPM_LOW 3900

@@ -10,6 +10,7 @@ public:
 	virtual void calculate() = 0;
 	void add(Path* partOfPath);
 	void show();
+	int* getEndPoint();
 	int* getPoint(int i);
 
 

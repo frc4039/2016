@@ -40,3 +40,6 @@ void Path::show(void){
 int* Path::getPoint(int i){
 	return path[i];
 }
+int* Path::getEndPoint(){
+	return path[size-1];
+}
