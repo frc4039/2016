@@ -1,8 +1,12 @@
 #include "pathfollower.h"
 #include "path.h"
 #include <stdio.h>
+<<<<<<< HEAD
 #include "SimPID.h"
 #include "math.h"
+=======
+#include <math.h>
+>>>>>>> 1ee12a82df25e250534c8b470488416f4013c21e
 
 
 
@@ -11,7 +15,6 @@ PathFollower::PathFollower(){
 	lastX = lastY = 0;
 	nextPoint = 0;
 	leftSpeed = rightSpeed = 0;
-	SimPID *PID
 }
 
 void PathFollower::initPath(Path *nPath, PathDirection nDirection){
@@ -19,7 +22,6 @@ void PathFollower::initPath(Path *nPath, PathDirection nDirection){
 	path = nPath;
 	direction = nDirection;
 	nextPoint = 0;
-	pointPID = new SimPID;
 }
 
 void PathFollower::driveToPoint(void){
@@ -46,16 +48,21 @@ float PathFollower::normalize(float normalAngle){
 		normalAngle += 360;
 
 	return normalAngle;
+}
 
 void PathFollower::setSpeed(float nMaxSpeed, float nP){
 	maxSpeed = nMaxSpeed;
 	distanceP = nP;
 }
 
+<<<<<<< HEAD
 #define SQ(X) ((X)*(X))
 
 
 void PathFollower::followPath(int nPosX, int nPosY, float nAngle, float *nLeftSpeed, float *nRightSpeed){
+=======
+int PathFollower::followPath(int nPosX, int nPosY, float nAngle, float *nLeftSpeed, float *nRightSpeed){
+>>>>>>> 1ee12a82df25e250534c8b470488416f4013c21e
 	posX = nPosX;
 	posY = nPosY;
 	angle = nAngle;
@@ -70,4 +77,9 @@ void PathFollower::followPath(int nPosX, int nPosY, float nAngle, float *nLeftSp
 	//speed is determined by distance from the ENDPOINT not intermediate points
 	//use drive to point to do the calculations, this function just controls the targets
 	printf("Look at me! I'm Following a path! (%d,%d)\n", posX, posY);
+	return 0;
+}
+
+void PathFollower::updatePos(void){
+
 }

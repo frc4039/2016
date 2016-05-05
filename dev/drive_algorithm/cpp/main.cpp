@@ -33,7 +33,6 @@ int main(){
 		leftDrive->set(left)
 
 	robot->updatePos();
-
 	}
 
 	return 0;
