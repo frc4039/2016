@@ -55,14 +55,10 @@ void PathFollower::setSpeed(float nMaxSpeed, float nP){
 	distanceP = nP;
 }
 
-<<<<<<< HEAD
 #define SQ(X) ((X)*(X))
 
 
 void PathFollower::followPath(int nPosX, int nPosY, float nAngle, float *nLeftSpeed, float *nRightSpeed){
-=======
-int PathFollower::followPath(int nPosX, int nPosY, float nAngle, float *nLeftSpeed, float *nRightSpeed){
->>>>>>> 1ee12a82df25e250534c8b470488416f4013c21e
 	posX = nPosX;
 	posY = nPosY;
 	angle = nAngle;
