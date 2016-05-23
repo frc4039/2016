@@ -4,3 +4,4 @@ main/Debug/
 *.properties
 *~*
 a.out
+*.pyc

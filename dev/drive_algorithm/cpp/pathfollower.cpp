@@ -1,12 +1,8 @@
 #include "pathfollower.h"
 #include "path.h"
 #include <stdio.h>
-<<<<<<< HEAD
-#include "SimPID.h"
-#include "math.h"
-=======
+
 #include <math.h>
->>>>>>> 1ee12a82df25e250534c8b470488416f4013c21e
 
 
 
@@ -58,13 +54,13 @@ void PathFollower::setSpeed(float nMaxSpeed, float nP){
 #define SQ(X) ((X)*(X))
 
 
-void PathFollower::followPath(int nPosX, int nPosY, float nAngle, float *nLeftSpeed, float *nRightSpeed){
+int PathFollower::followPath(int nPosX, int nPosY, float nAngle, float *nLeftSpeed, float *nRightSpeed){
 	posX = nPosX;
 	posY = nPosY;
 	angle = nAngle;
 	driveToPoint();
 
-	driveSpeed = distanceP*sqrt((SQ(path->getEndpoint()[0]-posX) + SQ(path->getEndpoint()[1]-posY)));
+	float driveSpeed = distanceP*sqrt((SQ(path->getEndPoint()[0]-posX) + SQ(path->getEndPoint()[1]-posY)));
 
 
 	//following is acheived by using the drive to point function

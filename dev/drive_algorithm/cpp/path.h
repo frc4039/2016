@@ -11,7 +11,7 @@ public:
 	void add(Path* partOfPath);
 	void show();
 	int* getPoint(int i);
-
+	int* getEndPoint(void);
 
 };
 

@@ -29,11 +29,11 @@ int main(){
 	int x = 0, y = 0;
 	robot->initPath(auto1, PathForward);
 
-	while (robot->followPath(nav->GetYaw(), &left, &right) == 0){
-		leftDrive->set(left)
+	/*while (robot->followPath(nav->GetYaw(), &left, &right) == 0){
+		leftDrive->set(left)*/
 
 	robot->updatePos();
-	}
+	//}
 
 	return 0;
 }
