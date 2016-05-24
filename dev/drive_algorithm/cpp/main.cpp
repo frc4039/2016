@@ -14,10 +14,10 @@ int main(){
 	int c3[2] = {16000, -5000};
 	int c4[2] = {0, -5000};
 
-	auto1 = new Line(start,end, 100);
+	auto1 = new PathLine(start,end, 100);
 	auto1->calculate();
 	
-	curve = new Curve(end,c2,c3,c4,200);
+	curve = new PathCurve(end,c2,c3,c4,200);
 	curve->calculate();
 
 	robot = new PathFollower();

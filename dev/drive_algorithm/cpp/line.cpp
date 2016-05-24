@@ -1,13 +1,13 @@
 #include "line.h"
 #include <stdio.h>
 
-Line::Line(int nstart[2], int nend[2], int nresolution){
+PathLine::PathLine(int nstart[2], int nend[2], int nresolution){
 	size = nresolution;
 	start = nstart;
 	end = nend;
 }
 
-void Line::calculate(){
+void PathLine::calculate(){
 	//get ready for parameterization
 	float U = 0;
 	int I = 0;

@@ -27,7 +27,7 @@ void PathFollower::driveToPoint(void){
 	//total speed given by PID to endpoint, not target point
 
 	int* nextCoordinate = path->getPoint(nextPoint);
-	float desiredAngle = atan2(nextCoordinate[1] - posY, nextCoordinate[0] - posX);
+	float desiredAngle = atan2((float)(nextCoordinate[1] - posY), (float)(nextCoordinate[0] - posX));
 	turnSpeed = turnP*normalize(desiredAngle - angle);
 
 
@@ -60,7 +60,7 @@ int PathFollower::followPath(int nPosX, int nPosY, float nAngle, float *nLeftSpe
 	angle = nAngle;
 	driveToPoint();
 
-	float driveSpeed = distanceP*sqrt((SQ(path->getEndPoint()[0]-posX) + SQ(path->getEndPoint()[1]-posY)));
+	float driveSpeed = distanceP*sqrt((float)((SQ(path->getEndPoint()[0]-posX) + SQ(path->getEndPoint()[1]-posY))));
 
 
 	//following is acheived by using the drive to point function

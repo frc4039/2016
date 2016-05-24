@@ -3,13 +3,13 @@
 
 #include "path.h"
 
-class Line : public Path
+class PathLine : public Path
 {
 private:
 	int *start;
 	int *end;
 public: 
-	Line(int start[2], int end[2], int nresolution);
+	PathLine(int start[2], int end[2], int nresolution);
 	void calculate();
 };
 

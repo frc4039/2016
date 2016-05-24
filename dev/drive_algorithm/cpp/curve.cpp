@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <math.h>
 
-Curve::Curve(int nstart[2], int ncp1[2], int ncp2[2], int nend[2], int nresolution){
+PathCurve::PathCurve(int nstart[2], int ncp1[2], int ncp2[2], int nend[2], int nresolution){
 	size = nresolution;
 	start = nstart;
 	end = nend;
@@ -10,7 +10,7 @@ Curve::Curve(int nstart[2], int ncp1[2], int ncp2[2], int nend[2], int nresoluti
 	cp2 = ncp2;
 }
 
-int Curve::fact(int x){
+int PathCurve::fact(int x){
 	if ( x == 0 )
 		return 1;
 	int y = 1;
@@ -19,11 +19,11 @@ int Curve::fact(int x){
 	return y;
 }
 
-float Curve::f(int i, float u){
+float PathCurve::f(int i, float u){
 	return (fact(3) / fact(i) / fact(3-i))*pow(u,i)*pow(1-u, 3-i);
 }
 
-void Curve::calculate(){
+void PathCurve::calculate(){
 	//get ready for parameterization
 	float U = 0;
 	int I = 0;

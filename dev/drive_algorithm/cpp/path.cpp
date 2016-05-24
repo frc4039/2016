@@ -42,5 +42,5 @@ int* Path::getPoint(int i){
 }
 
 int* Path::getEndPoint(void){
-
+	return path[size-1];
 }

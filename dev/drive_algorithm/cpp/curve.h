@@ -3,7 +3,7 @@
 
 #include "path.h"
 
-class Curve : public Path
+class PathCurve : public Path
 {
 private:
 	int *start;
@@ -13,7 +13,7 @@ private:
 	float f(int i, float u);
 	int fact(int x);
 public: 
-	Curve(int start[2], int ncp1[2], int ncp2[2], int end[2], int nresolution);
+	PathCurve(int start[2], int ncp1[2], int ncp2[2], int end[2], int nresolution);
 	void calculate();
 };
 
