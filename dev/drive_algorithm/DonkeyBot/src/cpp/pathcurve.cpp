@@ -1,4 +1,5 @@
-#include "curve.h"
+#include "pathcurve.h"
+
 #include <stdio.h>
 #include <math.h>
 
@@ -8,6 +9,7 @@ PathCurve::PathCurve(int nstart[2], int ncp1[2], int ncp2[2], int nend[2], int n
 	end = nend;
 	cp1 = ncp1;
 	cp2 = ncp2;
+	calculate();
 }
 
 int PathCurve::fact(int x){

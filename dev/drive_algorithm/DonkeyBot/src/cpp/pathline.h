@@ -6,6 +6,7 @@
 class PathLine : public Path
 {
 private:
+	PathLine();
 	int *start;
 	int *end;
 public: 

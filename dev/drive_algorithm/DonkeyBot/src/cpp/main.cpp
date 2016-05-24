@@ -1,7 +1,7 @@
-#include "line.h"
 #include "path.h"
-#include "curve.h"
+#include "pathcurve.h"
 #include "pathfollower.h"
+#include "pathline.h"
 
 int main(){
 	Path *auto1;
@@ -15,10 +15,10 @@ int main(){
 	int c4[2] = {0, -5000};
 
 	auto1 = new PathLine(start,end, 100);
-	auto1->calculate();
+	//auto1->calculate();
 	
 	curve = new PathCurve(end,c2,c3,c4,200);
-	curve->calculate();
+	//curve->calculate();
 
 	robot = new PathFollower();
 

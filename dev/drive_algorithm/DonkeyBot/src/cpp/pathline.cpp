@@ -1,10 +1,14 @@
-#include "line.h"
+#include "pathline.h"
+
 #include <stdio.h>
+
+PathLine::PathLine(){}
 
 PathLine::PathLine(int nstart[2], int nend[2], int nresolution){
 	size = nresolution;
 	start = nstart;
 	end = nend;
+	calculate();
 }
 
 void PathLine::calculate(){

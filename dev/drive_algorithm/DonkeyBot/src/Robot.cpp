@@ -1,7 +1,7 @@
 #include "WPILib.h"
-#include "curve.h"
-#include "line.h"
 #include "path.h"
+#include "pathcurve.h"
+#include "pathline.h"
 #include "pathfollower.h"
 #include "AHRS.h"
 
@@ -9,7 +9,7 @@ class Robot: public IterativeRobot
 {
 private:
 
-	AHRS *nav;
+	AHRS *navx;
 
 	Encoder *leftDriveEnc;
 	Encoder *rightDriveEnc;
@@ -18,16 +18,12 @@ private:
 	VictorSP *leftDrive1;
 	VictorSP *rightDrive2;
 	VictorSP *rightDrive3;
-	Path *line2;
-	PathCurve *something;
-	PathFollower *robotFollow;
+
+	Path *line;
 
 	void RobotInit()
 	{
-		int start[2] = {0, 0};
-		int end[2] = {5000, 0};
-
-		nav = new AHRS(SPI::Port::kMXP);
+		navx = new AHRS(SPI::Port::kMXP);
 
 		leftDriveEnc = new Encoder(2, 3);
 		rightDriveEnc = new Encoder(5, 4);
@@ -37,7 +33,9 @@ private:
 		rightDrive2 = new VictorSP(2);
 		rightDrive3 = new VictorSP(3);
 
-		line2 = new PathLine();
+		int start[2] = {0, 0};
+		int end[2] = {5000, 0};
+		line = new PathLine(start, end, 2);
 	}
 
 	void DisabledInit()
