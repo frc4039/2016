@@ -17,7 +17,7 @@ void PathFollower::initPath(Path *nPath, PathDirection nDirection){
 
 	path = nPath;
 	direction = nDirection;
-	nextPoint = 0;
+	nextPoint = 1;
 }
 
 void PathFollower::driveToPoint(void){
@@ -30,7 +30,7 @@ void PathFollower::driveToPoint(void){
 	float desiredAngle = atan2((float)(nextCoordinate[1] - posY), (float)(nextCoordinate[0] - posX));
 	turnSpeed = turnP*normalize(desiredAngle - angle);
 
-
+	printf("driving to point (%d,%d)\n", nextCoordinate[0], nextCoordinate[1]);
 }
 
 float PathFollower::normalize(float normalAngle){
@@ -54,24 +54,40 @@ void PathFollower::setSpeed(float nMaxSpeed, float nP){
 #define SQ(X) ((X)*(X))
 
 
-int PathFollower::followPath(int nPosX, int nPosY, float nAngle, float *nLeftSpeed, float *nRightSpeed){
-	posX = nPosX;
-	posY = nPosY;
-	angle = nAngle;
-	driveToPoint();
-
-	float driveSpeed = distanceP*sqrt((float)((SQ(path->getEndPoint()[0]-posX) + SQ(path->getEndPoint()[1]-posY))));
-
-
+int PathFollower::followPath(int leftEncoder, int rightEncoder, float nAngle, float &nLeftSpeed, float &nRightSpeed){
 	//following is acheived by using the drive to point function
 	//the robot attempts to drive to a point and when it gets close we move the point
 	//to the next point on the path
 	//speed is determined by distance from the ENDPOINT not intermediate points
 	//use drive to point to do the calculations, this function just controls the targets
-	printf("Look at me! I'm Following a path! (%d,%d)\n", posX, posY);
+
+	//angle = nAngle;
+
+	//get new position
+	updatePos(leftEncoder, rightEncoder, nAngle);
+
+	//get drive speed and turn speed
+	driveSpeed = distanceP*sqrt((float)((SQ(path->getEndPoint()[0]-posX) + SQ(path->getEndPoint()[1]-posY))));
+	driveToPoint();
+
+	//set left drive and right drive variables
+	//this automatically returns them
+	nLeftSpeed = -turnSpeed + driveSpeed;
+	nRightSpeed = -turnSpeed - driveSpeed;
+
+	printf("driving to path. turn: %f\tdrive: %f)\n", turnSpeed, driveSpeed);
+
+	//return 1 if follow is complete, else 0
 	return 0;
 }
 
-void PathFollower::updatePos(void){
+void PathFollower::updatePos(int leftEncoder, int rightEncoder, float direction){
+	//this function will update the robots position, is called periodically by followPath()
+	int d = ((leftEncoder - lastLeftEncoder) + (rightEncoder - lastRightEncoder) ) / 2;
 
+	posX += d * cos(direction);
+	posY += d * sin(direction);
+
+	lastLeftEncoder = leftEncoder;
+	lastRightEncoder = rightEncoder;
 }

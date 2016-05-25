@@ -13,6 +13,7 @@ class PathFollower
 private:
 	int posX, posY;
 	int lastX, lastY;
+	int lastLeftEncoder, lastRightEncoder;
 	int nextPoint;
 	float angle;
 	PathDirection direction;
@@ -23,15 +24,15 @@ private:
 	void driveToPoint(void);
 	float distanceP;
 	float turnP;
-	float turnSpeed;
+	float turnSpeed, driveSpeed;
 	float normalize(float normalAngle);
 
 public:
 	PathFollower();
 	void initPath(Path *nPath, PathDirection nDirection);
-	int followPath(int nPosX, int nPosY, float nAngle, float *nLeftSpeed, float *nRightSpeed);
+	int followPath(int leftEncoder, int rightEncoder, float nAngle, float &nLeftSpeed, float &nRightSpeed);
 	void setSpeed(float nMaxSpeed, float nP);
-	void updatePos(void);
+	void updatePos(int leftEncoder, int rightEncoder, float direction);
 
 };
 
