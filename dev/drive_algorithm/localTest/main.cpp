@@ -1,7 +1,7 @@
-#include "path.h"
-#include "pathcurve.h"
-#include "pathfollower.h"
-#include "pathline.h"
+#include "motion/path.h"
+#include "motion/pathcurve.h"
+#include "motion/pathfollower.h"
+#include "motion/pathline.h"
 
 int main(){
 	Path *auto1;

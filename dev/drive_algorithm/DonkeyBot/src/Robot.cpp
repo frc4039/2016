@@ -1,8 +1,8 @@
 #include "WPILib.h"
-#include "cpp/path.h"
-#include "cpp/pathcurve.h"
-#include "cpp/pathline.h"
-#include "cpp/pathfollower.h"
+#include "motion/path.h"
+#include "motion/pathcurve.h"
+#include "motion/pathline.h"
+#include "motion/pathfollower.h"
 //#include "AHRS.h"
 
 class Robot: public IterativeRobot
