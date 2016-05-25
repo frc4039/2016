@@ -1,15 +1,15 @@
 #include "WPILib.h"
-#include "path.h"
-#include "pathcurve.h"
-#include "pathline.h"
-#include "pathfollower.h"
-#include "AHRS.h"
+#include "cpp/path.h"
+#include "cpp/pathcurve.h"
+#include "cpp/pathline.h"
+#include "cpp/pathfollower.h"
+//#include "AHRS.h"
 
 class Robot: public IterativeRobot
 {
 private:
 
-	AHRS *navx;
+	//AHRS *navx;
 
 	Encoder *leftDriveEnc;
 	Encoder *rightDriveEnc;
@@ -23,7 +23,7 @@ private:
 
 	void RobotInit()
 	{
-		navx = new AHRS(SPI::Port::kMXP);
+		//navx = new AHRS(SPI::Port::kMXP);
 
 		leftDriveEnc = new Encoder(2, 3);
 		rightDriveEnc = new Encoder(5, 4);
