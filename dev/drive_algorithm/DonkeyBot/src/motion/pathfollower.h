@@ -2,6 +2,7 @@
 #define __PATH_FOLLOWER__
 
 #include "path.h"
+#include "WPILib.h"
 
 typedef enum PathFollower_directions_enum{
 	PathForward = 0,
@@ -30,10 +31,13 @@ private:
 public:
 	PathFollower();
 	void initPath(Path *nPath, PathDirection nDirection);
-	int followPath(int leftEncoder, int rightEncoder, float nAngle, float &nLeftSpeed, float &nRightSpeed);
+	int followPath(int32_t leftEncoder, int32_t rightEncoder, float nAngle, float &nLeftSpeed, float &nRightSpeed);
 	void setSpeed(float nMaxSpeed, float nP);
 	void updatePos(int leftEncoder, int rightEncoder, float direction);
-
+	void reset(void);
+	int getXPos(void);
+	int getYPos(void);
+	void pickNextPoint(void);
 };
 
 #endif

@@ -1,15 +1,19 @@
+//Changelog: working drive2point, will soon change to point to point to point
+
 #include "WPILib.h"
 #include "motion/path.h"
 #include "motion/pathcurve.h"
 #include "motion/pathline.h"
 #include "motion/pathfollower.h"
-//#include "AHRS.h"
+#include "AHRS.h"
 
 class Robot: public IterativeRobot
 {
 private:
 
-	//AHRS *navx;
+	Joystick *joystick;
+
+	AHRS *navx;
 
 	Encoder *leftDriveEnc;
 	Encoder *rightDriveEnc;
@@ -21,9 +25,14 @@ private:
 
 	Path *line;
 
+	PathFollower *robot;
+
+	float left;
+	float right;
+
 	void RobotInit()
 	{
-		//navx = new AHRS(SPI::Port::kMXP);
+		navx = new AHRS(SPI::Port::kMXP);
 
 		leftDriveEnc = new Encoder(2, 3);
 		rightDriveEnc = new Encoder(5, 4);
@@ -34,8 +43,13 @@ private:
 		rightDrive3 = new VictorSP(3);
 
 		int start[2] = {0, 0};
-		int end[2] = {5000, 0};
+		int end[2] = {-8000, -16000};
 		line = new PathLine(start, end, 2);
+
+		robot = new PathFollower();
+
+		joystick = new Joystick(1);
+
 	}
 
 	void DisabledInit()
@@ -43,19 +57,32 @@ private:
 
 	}
 
-	void DisabeledPeriodic()
+	void DisabledPeriodic()
 	{
+		printf("Gyro: %f\tLeftEncoder: %d\tRightEncoder: %d", navx->GetYaw(), leftDriveEnc->Get(), rightDriveEnc->Get());
+		printf("X pos: %d\tY pos: %d\n", robot->getXPos(), robot->getYPos());
+		robot->updatePos(leftDriveEnc->Get(), rightDriveEnc->Get(), navx->GetYaw());
 
+		if(joystick->GetRawButton(1)){
+			robot->reset();
+			navx->Reset();
+		}
 	}
 
 	void AutonomousInit()
 	{
-
+		robot->initPath(line, PathForward);
 	}
 
 	void AutonomousPeriodic()
 	{
-
+		if(robot->followPath(leftDriveEnc->Get(), rightDriveEnc->Get(), navx->GetYaw(), left, right) == 0)
+		{
+			leftDrive4->SetSpeed(left);
+			leftDrive1->SetSpeed(left);
+			rightDrive2->SetSpeed(right);
+			rightDrive3->SetSpeed(right);
+		}
 	}
 
 	void TeleopInit()
@@ -65,6 +92,21 @@ private:
 
 	void TeleopPeriodic()
 	{
+		printf("Gyro: %f\tLeftEncoder: %d\tRightEncoder: %d", navx->GetYaw(), leftDriveEnc->Get(), rightDriveEnc->Get());
+		printf("X pos: %d\tY pos: %d\n", robot->getXPos(), robot->getYPos());
+		robot->updatePos(leftDriveEnc->Get(), rightDriveEnc->Get(), navx->GetYaw());
+
+		left = -joystick->GetRawAxis(0) + joystick->GetRawAxis(1);
+		right = -joystick->GetRawAxis(0) - joystick->GetRawAxis(1);
+		leftDrive4->SetSpeed(left);
+		leftDrive1->SetSpeed(left);
+		rightDrive2->SetSpeed(right);
+		rightDrive3->SetSpeed(right);
+
+		if(joystick->GetRawButton(1)){
+			robot->reset();
+			navx->Reset();
+		}
 
 	}
 

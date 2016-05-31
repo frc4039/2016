@@ -1,5 +1,6 @@
 #include "pathfollower.h"
 #include "path.h"
+#include "WPILib.h"
 #include <stdio.h>
 
 #include <math.h>
@@ -18,6 +19,10 @@ void PathFollower::initPath(Path *nPath, PathDirection nDirection){
 	path = nPath;
 	direction = nDirection;
 	nextPoint = 1;
+
+	maxSpeed = 0.5;
+	distanceP = 0.0001;
+	turnP = 0.825;
 }
 
 void PathFollower::driveToPoint(void){
@@ -32,16 +37,17 @@ void PathFollower::driveToPoint(void){
 
 	printf("driving to point (%d,%d)\n", nextCoordinate[0], nextCoordinate[1]);
 }
+#define PI 3.141592653589793
 
 float PathFollower::normalize(float normalAngle){
 
-	if(normalAngle > 180)
+	if(normalAngle > PI)
 
-		normalAngle -= 360;
+		normalAngle -= 2*PI;
 
-	else if(normalAngle < -180)
+	else if(normalAngle < -PI)
 
-		normalAngle += 360;
+		normalAngle += 2*PI;
 
 	return normalAngle;
 }
@@ -52,42 +58,76 @@ void PathFollower::setSpeed(float nMaxSpeed, float nP){
 }
 
 #define SQ(X) ((X)*(X))
+float deg2rad(float deg){
+	return deg / 180 * PI;
+}
 
+void pickNextPoint(void){
 
-int PathFollower::followPath(int leftEncoder, int rightEncoder, float nAngle, float &nLeftSpeed, float &nRightSpeed){
+	nextPoint = ?????;
+}
+
+int PathFollower::followPath(int32_t leftEncoder, int32_t rightEncoder, float nAngle, float &nLeftSpeed, float &nRightSpeed){
 	//following is acheived by using the drive to point function
 	//the robot attempts to drive to a point and when it gets close we move the point
 	//to the next point on the path
 	//speed is determined by distance from the ENDPOINT not intermediate points
 	//use drive to point to do the calculations, this function just controls the targets
 
-	//angle = nAngle;
+	angle = deg2rad(nAngle);
 
 	//get new position
 	updatePos(leftEncoder, rightEncoder, nAngle);
 
+	pickNextPoint();
+
 	//get drive speed and turn speed
-	driveSpeed = distanceP*sqrt((float)((SQ(path->getEndPoint()[0]-posX) + SQ(path->getEndPoint()[1]-posY))));
+	driveSpeed = -distanceP*sqrt((float)((SQ(path->getEndPoint()[0]-posX) + SQ(path->getEndPoint()[1]-posY))));
 	driveToPoint();
+
+	if (driveSpeed > maxSpeed){
+		driveSpeed = maxSpeed;
+	}
+	else if (driveSpeed < -maxSpeed){
+		driveSpeed = -maxSpeed;
+	}
 
 	//set left drive and right drive variables
 	//this automatically returns them
 	nLeftSpeed = -turnSpeed + driveSpeed;
 	nRightSpeed = -turnSpeed - driveSpeed;
 
+	printf("angle: %f\tPosX: %d\tPosY: %d\n", nAngle, posX, posY);
 	printf("driving to path. turn: %f\tdrive: %f)\n", turnSpeed, driveSpeed);
 
 	//return 1 if follow is complete, else 0
 	return 0;
 }
 
+
+
 void PathFollower::updatePos(int leftEncoder, int rightEncoder, float direction){
 	//this function will update the robots position, is called periodically by followPath()
 	int d = ((leftEncoder - lastLeftEncoder) + (rightEncoder - lastRightEncoder) ) / 2;
 
-	posX += d * cos(direction);
-	posY += d * sin(direction);
+	posX += d * cos(deg2rad(direction));
+	posY += d * sin(deg2rad(direction));
 
 	lastLeftEncoder = leftEncoder;
 	lastRightEncoder = rightEncoder;
 }
+
+void PathFollower::reset(void)
+{
+	posX = 0;
+	posY = 0;
+}
+
+int PathFollower::getXPos(void){
+	return posX;
+}
+
+int PathFollower::getYPos(void){
+	return posY;
+}
+
