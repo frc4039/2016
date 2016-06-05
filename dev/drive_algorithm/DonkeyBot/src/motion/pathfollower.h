@@ -33,7 +33,7 @@ public:
 	void initPath(Path *nPath, PathDirection nDirection);
 	int followPath(int32_t leftEncoder, int32_t rightEncoder, float nAngle, float &nLeftSpeed, float &nRightSpeed);
 	void setSpeed(float nMaxSpeed, float nP);
-	void updatePos(int leftEncoder, int rightEncoder, float direction);
+	void updatePos(int leftEncoder, int rightEncoder, float heading);
 	void reset(void);
 	int getXPos(void);
 	int getYPos(void);

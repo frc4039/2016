@@ -32,8 +32,11 @@ void PathFollower::driveToPoint(void){
 
 	int* nextCoordinate = path->getPoint(nextPoint);
 	float desiredAngle = atan2((float)(nextCoordinate[1] - posY), (float)(nextCoordinate[0] - posX));
-	turnSpeed = turnP*normalize(desiredAngle - angle);
-
+	
+	if (direction == PathForwards)
+		turnSpeed = turnP * normalize(desiredAngle - angle);
+	else
+		turnSpeed = turnP * normalize(desiredAngle - angle + PI);
 	printf("driving to point (%d,%d)\n", nextCoordinate[0], nextCoordinate[1]);
 }
 #define PI 3.141592653589793
@@ -81,7 +84,7 @@ int PathFollower::followPath(int32_t leftEncoder, int32_t rightEncoder, float nA
 	pickNextPoint();
 
 	//get drive speed and turn speed
-	driveSpeed = -distanceP*sqrt((float)((SQ(path->getEndPoint()[0]-posX) + SQ(path->getEndPoint()[1]-posY))));
+	driveSpeed = -direction*distanceP*sqrt((float)((SQ(path->getEndPoint()[0]-posX) + SQ(path->getEndPoint()[1]-posY))));
 	driveToPoint();
 
 	if (driveSpeed > maxSpeed){
@@ -105,12 +108,12 @@ int PathFollower::followPath(int32_t leftEncoder, int32_t rightEncoder, float nA
 
 
 
-void PathFollower::updatePos(int leftEncoder, int rightEncoder, float direction){
+void PathFollower::updatePos(int leftEncoder, int rightEncoder, float heading){
 	//this function will update the robots position, is called periodically by followPath()
 	int d = ((leftEncoder - lastLeftEncoder) + (rightEncoder - lastRightEncoder) ) / 2;
 
-	posX += d * cos(deg2rad(direction));
-	posY += d * sin(deg2rad(direction));
+	posX += d * cos(deg2rad(heading));
+	posY += d * sin(deg2rad(heading));
 
 	lastLeftEncoder = leftEncoder;
 	lastRightEncoder = rightEncoder;
