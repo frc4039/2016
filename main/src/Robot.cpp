@@ -53,7 +53,7 @@
 #define SERVO_OUT_2 0
 
 //current shooter constants
-#define SPEED_RPM 6675 //6500
+#define SPEED_RPM 7100 //6500
 //#define SPEED_RPM 1600
 //#define SPEED_RPM_LOW 1100
 #define SPEED_RPM_LOW 3900
@@ -111,7 +111,7 @@
 //VISION SETTINGS, READ CAREFULLY
 //left right trim for robot aim in pixels
 //try this first if change is needed
-#define AIM_CORRECTION 50
+#define AIM_CORRECTION 40
 //tells robot to save the pictures it takes when trying to shoot
 //comment out to not save pictures
 #define SAVE_SHOT_PICTURES
@@ -2976,7 +2976,7 @@ private:
 			FindTargetCenter();
 			teleDrive();
 
-
+		//printf("Shooter 1 RPM: %f\tShooter 2: %f", shooter1->get   )
 		}
 		//tempIntake();
 
