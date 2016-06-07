@@ -24,6 +24,7 @@ void PathFollower::initPath(Path *nPath, PathDirection nDirection){
 	maxSpeed = 0.5;
 	distanceP = 0.0001;
 	turnP = 0.825;
+	distanceError = 1000;
 }
 
 void PathFollower::driveToPoint(void){
@@ -39,7 +40,8 @@ void PathFollower::driveToPoint(void){
 		turnSpeed = turnP * normalize(desiredAngle - angle);
 	else
 		turnSpeed = turnP * normalize(desiredAngle - angle + PI);
-	printf("driving to point (%d,%d)\n", nextCoordinate[0], nextCoordinate[1]);
+	printf("driving to point (%d,%d,%d)\n", nextCoordinate[0], nextCoordinate[1], nextPoint);
+	printf("desiredangle: %f", desiredAngle*180/PI);
 }
 
 float PathFollower::normalize(float normalAngle){
@@ -66,8 +68,17 @@ float deg2rad(float deg){
 }
 
 void PathFollower::pickNextPoint(void){
+	distanceToPoint = sqrt((float)((SQ(path->getPoint(nextPoint)[0]-posX) + SQ(path->getPoint(nextPoint)[1]-posY))));
 
-	nextPoint = 1;
+	if(distanceToPoint < distanceError && nextPoint == path->size - 1)
+			done = true;
+	if(distanceToPoint < distanceError && nextPoint + 1 != path->size)
+	{
+		nextPoint = nextPoint + 1;
+
+	}
+
+
 }
 
 int PathFollower::followPath(int32_t leftEncoder, int32_t rightEncoder, float nAngle, float &nLeftSpeed, float &nRightSpeed){
@@ -97,8 +108,17 @@ int PathFollower::followPath(int32_t leftEncoder, int32_t rightEncoder, float nA
 
 	//set left drive and right drive variables
 	//this automatically returns them
-	nLeftSpeed = -turnSpeed + driveSpeed;
-	nRightSpeed = -turnSpeed - driveSpeed;
+
+	if(done == false)
+	{
+		nLeftSpeed = -turnSpeed + driveSpeed;
+		nRightSpeed = -turnSpeed - driveSpeed;
+	}
+	else
+	{
+		nLeftSpeed = 0;
+		nRightSpeed = 0;
+	}
 
 	printf("angle: %f\tPosX: %d\tPosY: %d\n", nAngle, posX, posY);
 	printf("driving to path. turn: %f\tdrive: %f)\n", turnSpeed, driveSpeed);
@@ -124,6 +144,8 @@ void PathFollower::reset(void)
 {
 	posX = 0;
 	posY = 0;
+	nextPoint = 1;
+	done = false;
 }
 
 int PathFollower::getXPos(void){

@@ -23,7 +23,8 @@ private:
 	VictorSP *rightDrive2;
 	VictorSP *rightDrive3;
 
-	Path *line;
+	Path *line, *line2, *line3;
+
 
 	PathFollower *robot;
 
@@ -43,10 +44,20 @@ private:
 		rightDrive3 = new VictorSP(3);
 
 		int start[2] = {0, 0};
-		int end[2] = {-4000, -8000};
-		line = new PathLine(start, end, 2);
+		int cp1[2] = {0, 14000};
+		int cp2[2] = {20000, -14000};
+		int cp3[2] = {20000, 14000};
+		int cp4[2] = {0, -14000};
+		int end[2] = {20000, 0};
+		int vertex[2] = {10000, 7000};
 
+
+		line = new PathCurve(start, cp1, cp2, end, 10);
+		line2 = new PathCurve(end, cp3, cp4, start, 10);
+		//line3 = new PathLine(vertex, start, 2);
 		robot = new PathFollower();
+		line->add(line2);
+		//line->add(line3);
 
 		joystick = new Joystick(1);
 
@@ -59,8 +70,8 @@ private:
 
 	void DisabledPeriodic()
 	{
-		printf("Gyro: %f\tLeftEncoder: %d\tRightEncoder: %d", navx->GetYaw(), leftDriveEnc->Get(), rightDriveEnc->Get());
-		printf("X pos: %d\tY pos: %d\n", robot->getXPos(), robot->getYPos());
+		//printf("Gyro: %f\tLeftEncoder: %d\tRightEncoder: %d", navx->GetYaw(), leftDriveEnc->Get(), rightDriveEnc->Get());
+		//printf("X pos: %d\tY pos: %d\n", robot->getXPos(), robot->getYPos());
 		robot->updatePos(leftDriveEnc->Get(), rightDriveEnc->Get(), navx->GetYaw());
 
 		if(joystick->GetRawButton(1)){

@@ -16,9 +16,12 @@ private:
 	int lastX, lastY;
 	int lastLeftEncoder, lastRightEncoder;
 	int nextPoint;
+	bool done;
 	float angle;
 	PathDirection direction;
 	float distanceToEnd;
+	float distanceToPoint;
+	float distanceError;
 	float maxSpeed;
 	Path *path;
 	float leftSpeed, rightSpeed;
