@@ -6,6 +6,7 @@
 #include <math.h>
 
 
+
 PathFollower::PathFollower(){
 	posX = posY = 0;
 	lastX = lastY = 0;
@@ -64,9 +65,9 @@ float deg2rad(float deg){
 	return deg / 180 * PI;
 }
 
-void PathFollower::pickNextPoint(void){
+void pickNextPoint(void){
 
-	nextPoint = 5;
+	nextPoint = ?????;
 }
 
 int PathFollower::followPath(int32_t leftEncoder, int32_t rightEncoder, float nAngle, float &nLeftSpeed, float &nRightSpeed){
