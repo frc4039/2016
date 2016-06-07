@@ -5,8 +5,8 @@
 #include "WPILib.h"
 
 typedef enum PathFollower_directions_enum{
-	PathForward = 0,
-	PathBackward = 1,
+	PathForward = 1,
+	PathBackward = -1,
 } PathDirection;
 
 class PathFollower

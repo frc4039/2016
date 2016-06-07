@@ -43,7 +43,7 @@ private:
 		rightDrive3 = new VictorSP(3);
 
 		int start[2] = {0, 0};
-		int end[2] = {-8000, -16000};
+		int end[2] = {-4000, -8000};
 		line = new PathLine(start, end, 2);
 
 		robot = new PathFollower();

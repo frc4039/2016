@@ -5,6 +5,7 @@
 
 #include <math.h>
 
+#define PI (float)3.141592653589793
 
 
 PathFollower::PathFollower(){
@@ -34,13 +35,12 @@ void PathFollower::driveToPoint(void){
 	int* nextCoordinate = path->getPoint(nextPoint);
 	float desiredAngle = atan2((float)(nextCoordinate[1] - posY), (float)(nextCoordinate[0] - posX));
 	
-	if (direction == PathForwards)
+	if (direction == PathForward)
 		turnSpeed = turnP * normalize(desiredAngle - angle);
 	else
 		turnSpeed = turnP * normalize(desiredAngle - angle + PI);
 	printf("driving to point (%d,%d)\n", nextCoordinate[0], nextCoordinate[1]);
 }
-#define PI 3.141592653589793
 
 float PathFollower::normalize(float normalAngle){
 
@@ -65,9 +65,9 @@ float deg2rad(float deg){
 	return deg / 180 * PI;
 }
 
-void pickNextPoint(void){
+void PathFollower::pickNextPoint(void){
 
-	nextPoint = ?????;
+	nextPoint = 1;
 }
 
 int PathFollower::followPath(int32_t leftEncoder, int32_t rightEncoder, float nAngle, float &nLeftSpeed, float &nRightSpeed){
