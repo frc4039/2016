@@ -10,6 +10,7 @@ PathCurve::PathCurve(int nstart[2], int ncp1[2], int ncp2[2], int nend[2], int n
 	cp1 = ncp1;
 	cp2 = ncp2;
 	calculate();
+	calcPathDistance();
 }
 
 int PathCurve::fact(int x){

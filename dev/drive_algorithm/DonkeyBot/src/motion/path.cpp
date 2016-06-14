@@ -1,5 +1,7 @@
 #include "path.h"
 #include <stdio.h>
+#include <math.h>
+#define SQ(X) ((X)*(X))
 	
 Path::Path(){};
 
@@ -43,4 +45,19 @@ int* Path::getPoint(int i){
 
 int* Path::getEndPoint(void){
 	return path[size-1];
+}
+
+float Path::getPathDistance(int i){
+	return pathDistance[i];
+
+}
+
+void Path::calcPathDistance(void){
+	pathDistance = new float[size-1];
+	float accum = 0;
+	pathDistance[size-1] = accum;
+	for (int i = size-2; i >= 0; i--){
+		accum += sqrt(SQ(path[i + 1][0] - path[i][0]) + SQ(path[i + 1][1] - path[i][1]));
+		pathDistance[i] = accum;
+	}
 }

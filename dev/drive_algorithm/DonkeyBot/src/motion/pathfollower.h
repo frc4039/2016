@@ -16,24 +16,30 @@ private:
 	int lastX, lastY;
 	int lastLeftEncoder, lastRightEncoder;
 	int nextPoint;
+	bool driveDone;
 	bool done;
 	float angle;
+	float finalAngle;
 	PathDirection direction;
 	float distanceToEnd;
 	float distanceToPoint;
 	float distanceError;
+	float turnError;
+	float driveError;
 	float maxSpeed;
 	Path *path;
 	float leftSpeed, rightSpeed;
 	void driveToPoint(void);
+	float driveToAngle(void);
 	float distanceP;
 	float turnP;
+	float errorTurnP;
 	float turnSpeed, driveSpeed;
 	float normalize(float normalAngle);
 
 public:
 	PathFollower();
-	void initPath(Path *nPath, PathDirection nDirection);
+	void initPath(Path *nPath, PathDirection nDirection, float nFinalAngle);
 	int followPath(int32_t leftEncoder, int32_t rightEncoder, float nAngle, float &nLeftSpeed, float &nRightSpeed);
 	void setSpeed(float nMaxSpeed, float nP);
 	void updatePos(int leftEncoder, int rightEncoder, float heading);
@@ -41,6 +47,7 @@ public:
 	int getXPos(void);
 	int getYPos(void);
 	void pickNextPoint(void);
+	bool isDone(void);
 };
 
 #endif

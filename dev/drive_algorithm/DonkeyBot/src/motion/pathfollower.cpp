@@ -15,15 +15,18 @@ PathFollower::PathFollower(){
 	leftSpeed = rightSpeed = 0;
 }
 
-void PathFollower::initPath(Path *nPath, PathDirection nDirection){
+void PathFollower::initPath(Path *nPath, PathDirection nDirection, float nFinalAngle){
 
 	path = nPath;
 	direction = nDirection;
 	nextPoint = 1;
 
+	finalAngle = nFinalAngle;
+
 	maxSpeed = 0.5;
 	distanceP = 0.0001;
 	turnP = 0.825;
+	errorTurnP = 0;
 	distanceError = 1000;
 }
 
@@ -35,11 +38,12 @@ void PathFollower::driveToPoint(void){
 
 	int* nextCoordinate = path->getPoint(nextPoint);
 	float desiredAngle = atan2((float)(nextCoordinate[1] - posY), (float)(nextCoordinate[0] - posX));
-	
 	if (direction == PathForward)
-		turnSpeed = turnP * normalize(desiredAngle - angle);
+		turnError = normalize(desiredAngle - angle);
 	else
-		turnSpeed = turnP * normalize(desiredAngle - angle + PI);
+		turnError = normalize(desiredAngle - angle + PI);
+
+	turnSpeed = turnP * turnError;
 	printf("driving to point (%d,%d,%d)\n", nextCoordinate[0], nextCoordinate[1], nextPoint);
 	printf("desiredangle: %f", desiredAngle*180/PI);
 }
@@ -71,7 +75,7 @@ void PathFollower::pickNextPoint(void){
 	distanceToPoint = sqrt((float)((SQ(path->getPoint(nextPoint)[0]-posX) + SQ(path->getPoint(nextPoint)[1]-posY))));
 
 	if(distanceToPoint < distanceError && nextPoint == path->size - 1)
-			done = true;
+			driveDone = true;
 	if(distanceToPoint < distanceError && nextPoint + 1 != path->size)
 	{
 		nextPoint = nextPoint + 1;
@@ -90,13 +94,20 @@ int PathFollower::followPath(int32_t leftEncoder, int32_t rightEncoder, float nA
 
 	angle = deg2rad(nAngle);
 
+	float error = sqrt((float)((SQ(path->getEndPoint()[0]-posX) + SQ(path->getEndPoint()[1]-posY))));
 	//get new position
 	updatePos(leftEncoder, rightEncoder, nAngle);
 
 	pickNextPoint();
 
 	//get drive speed and turn speed
-	driveSpeed = -direction*distanceP*sqrt((float)((SQ(path->getEndPoint()[0]-posX) + SQ(path->getEndPoint()[1]-posY))));
+	if(path->getPathDistance(nextPoint) > error)
+	{
+		driveError = path->getPathDistance(nextPoint);
+	}
+
+	driveSpeed = -direction*distanceP*driveError + direction*errorTurnP*turnError;
+
 	driveToPoint();
 
 	if (driveSpeed > maxSpeed){
@@ -109,10 +120,16 @@ int PathFollower::followPath(int32_t leftEncoder, int32_t rightEncoder, float nA
 	//set left drive and right drive variables
 	//this automatically returns them
 
-	if(done == false)
+	if(driveDone == false)
 	{
 		nLeftSpeed = -turnSpeed + driveSpeed;
 		nRightSpeed = -turnSpeed - driveSpeed;
+	}
+	else if(done == false){
+		turnSpeed = driveToAngle();
+
+		nLeftSpeed = -turnSpeed;
+		nRightSpeed	= -turnSpeed;
 	}
 	else
 	{
@@ -145,7 +162,7 @@ void PathFollower::reset(void)
 	posX = 0;
 	posY = 0;
 	nextPoint = 1;
-	done = false;
+	driveDone = false;
 }
 
 int PathFollower::getXPos(void){
@@ -156,3 +173,11 @@ int PathFollower::getYPos(void){
 	return posY;
 }
 
+float PathFollower::driveToAngle(void){
+	return normalize(deg2rad(finalAngle)-angle)*turnP;
+}
+
+bool PathFollower::isDone()
+{
+	return done;
+}
