@@ -9,6 +9,7 @@ PathLine::PathLine(int nstart[2], int nend[2], int nresolution){
 	start = nstart;
 	end = nend;
 	calculate();
+	calcPathDistance();
 }
 
 void PathLine::calculate(){

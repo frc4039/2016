@@ -22,17 +22,16 @@ int main(){
 
 	robot = new PathFollower();
 
+	//curve->show();
 	auto1->add(curve);
 	auto1->show();
 
 	float left, right;
-	int x = 0, y = 0;
-	robot->initPath(auto1, PathForward);
+	robot->initPath(auto1, PathForward, 0);
 
 	/*while (robot->followPath(nav->GetYaw(), &left, &right) == 0){
 		leftDrive->set(left)*/
 
-	robot->updatePos();
 	//}
 
 	return 0;

@@ -1,11 +1,11 @@
 #include "pathfollower.h"
 #include "path.h"
-#include "WPILib.h"
-#include <stdio.h>
 
+#include <stdio.h>
 #include <math.h>
 
-#define PI (float)3.141592653589793
+#define PI 3.141592653589793f
+
 
 
 PathFollower::PathFollower(){
@@ -81,8 +81,6 @@ void PathFollower::pickNextPoint(void){
 		nextPoint = nextPoint + 1;
 
 	}
-
-
 }
 
 int PathFollower::followPath(int32_t leftEncoder, int32_t rightEncoder, float nAngle, float &nLeftSpeed, float &nRightSpeed){

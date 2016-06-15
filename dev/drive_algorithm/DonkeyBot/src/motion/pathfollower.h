@@ -2,7 +2,8 @@
 #define __PATH_FOLLOWER__
 
 #include "path.h"
-#include "WPILib.h"
+
+#include <stdint.h>
 
 typedef enum PathFollower_directions_enum{
 	PathForward = 1,
