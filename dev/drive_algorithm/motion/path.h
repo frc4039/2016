@@ -5,6 +5,7 @@ class Path
 {
 public:
 	Path();
+	virtual ~Path();
 	int **path;
 	float *pathDistance;
 	int size;

@@ -3,7 +3,14 @@
 #include <math.h>
 #define SQ(X) ((X)*(X))
 	
-Path::Path(){};
+Path::Path(){}
+
+Path::~Path(){
+	for(int i = 0; i < size; i++)
+			delete[] path[i];
+		delete[] path;
+		delete[] pathDistance;
+}
 
 void Path::add(Path* partOfPath){
 	int newsize = size+partOfPath->size;

@@ -5,6 +5,7 @@ class Path
 {
 public:
 	Path();
+	virtual ~Path();
 	int **path;
 	float *pathDistance;
 	int size;
@@ -15,8 +16,6 @@ public:
 	int* getEndPoint(void);
 	float getPathDistance(int i);
 	void calcPathDistance(void);
-	int lastPoint;
-
 };
 
 #endif

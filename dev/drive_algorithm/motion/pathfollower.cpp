@@ -20,9 +20,9 @@ void PathFollower::initPath(Path *nPath, PathDirection nDirection, float nFinalA
 	path = nPath;
 	direction = nDirection;
 	nextPoint = 1;
-
 	finalAngle = nFinalAngle;
 
+	//this stuff to constructor
 	maxSpeed = 0.5;
 	distanceP = 0.0001;
 	turnP = 0.825;
@@ -161,6 +161,7 @@ void PathFollower::reset(void)
 	posY = 0;
 	nextPoint = 1;
 	driveDone = false;
+	done = false;
 }
 
 int PathFollower::getXPos(void){

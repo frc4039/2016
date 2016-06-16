@@ -26,7 +26,7 @@ int main(){
 	auto1->add(curve);
 	auto1->show();
 
-	float left, right;
+	//float left, right;
 	robot->initPath(auto1, PathForward, 0);
 
 	/*while (robot->followPath(nav->GetYaw(), &left, &right) == 0){
