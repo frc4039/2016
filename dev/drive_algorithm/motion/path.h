@@ -15,8 +15,6 @@ public:
 	int* getEndPoint(void);
 	float getPathDistance(int i);
 	void calcPathDistance(void);
-	int lastPoint;
-
 };
 
 #endif
