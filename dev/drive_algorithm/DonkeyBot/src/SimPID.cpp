@@ -213,8 +213,13 @@ float SimPID::calcPID(float currentValue)
 
 	if (m_previousValue <= m_desiredValue + m_errorEpsilon
 				&& m_previousValue >= m_desiredValue - m_errorEpsilon
-				&& !m_firstCycle)
-		output = 0.0;
+				&& !m_firstCycle){
+		m_minOutput = 0.0;
+		if (m_previousValue == m_desiredValue)
+			output = 0.0;
+	}
+
+
 
 	// Save the current value for next cycle's D calculation.
 	m_previousValue = currentValue;
