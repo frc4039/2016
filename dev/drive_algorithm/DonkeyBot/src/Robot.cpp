@@ -7,6 +7,7 @@
 #include "motion/pathcurve.h"
 #include "motion/pathline.h"
 #include "motion/pathfollower.h"
+#include "SIMPID.h"
 #include "AHRS.h"
 #define X1 14000
 #define X2 10000

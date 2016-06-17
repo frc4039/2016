@@ -4,15 +4,19 @@
 #include <stdio.h>
 #include <math.h>
 
+#include "SimPID.h"
+
 #define PI 3.141592653589793f
 
-
+	SimPID *turnPID;
+	SimPID *drivePID;
 
 PathFollower::PathFollower(){
 	posX = posY = 0;
 	lastX = lastY = 0;
 	nextPoint = 0;
 	leftSpeed = rightSpeed = 0;
+
 }
 
 void PathFollower::initPath(Path *nPath, PathDirection nDirection, float nFinalAngle){
@@ -28,6 +32,9 @@ void PathFollower::initPath(Path *nPath, PathDirection nDirection, float nFinalA
 	turnP = 0.825;
 	errorTurnP = 0;
 	distanceError = 1000;
+
+	turnPID = new SimPID(0, 0, 0, 0);
+	drivePID = new SimPID(0,0, 0, 0);
 }
 
 void PathFollower::driveToPoint(void){
@@ -43,7 +50,9 @@ void PathFollower::driveToPoint(void){
 	else
 		turnError = normalize(desiredAngle - angle + PI);
 
-	turnSpeed = turnP * turnError;
+	turnPID->setDesiredValue(desiredAngle);
+	turnSpeed = turnPID->calcPID(angle);
+
 	printf("driving to point (%d,%d,%d)\n", nextCoordinate[0], nextCoordinate[1], nextPoint);
 	printf("desiredangle: %f", desiredAngle*180/PI);
 }
@@ -93,6 +102,7 @@ int PathFollower::followPath(int32_t leftEncoder, int32_t rightEncoder, float nA
 	angle = deg2rad(nAngle);
 
 	float error = sqrt((float)((SQ(path->getEndPoint()[0]-posX) + SQ(path->getEndPoint()[1]-posY))));
+
 	//get new position
 	updatePos(leftEncoder, rightEncoder, nAngle);
 
