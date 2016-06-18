@@ -7,7 +7,7 @@
 #include "motion/pathcurve.h"
 #include "motion/pathline.h"
 #include "motion/pathfollower.h"
-#include "SIMPID.h"
+//#include "SimPID.h"
 #include "AHRS.h"
 #define X1 14000
 #define X2 10000
@@ -52,21 +52,23 @@ private:
 		rightDrive3 = new VictorSP(3);
 
 		int start[2] = {0, 0};
-		int cp1[2] = {X2, 0};
-		int cp2[2] = {X3, Y};
-		int end1[2] = {X1, 0};
-		int end2[2] = {0, Y};
+		int cp1[2] = {10000, 0};
+		int cp2[2] = {-10000, 14000};
+		int cp3[2] = {10000, 14000};
+		int cp4[2] = {-10000, 0};
+		int end1[2] = {0, 14000};
+		int end2[2] = {0, 7000};
 
 
-		auto1path1 = new PathLine(start, end1, 10);
-		auto1path2 = new PathCurve(end1, cp1, cp2, end2, 10);
+		auto1path1 = new PathCurve(start, cp1, cp2, end1, 10);
+		auto1path2 = new PathCurve(end1, cp3, cp4, start, 10);
 		//line3 = new PathLine(vertex, start, 2);
+		auto1path1->add(auto1path2);
+
 		robot = new PathFollower();
-		//line->add(line2);
-		//line->add(line3);
 
 		joystick = new Joystick(1);
-
+		printf("Initted");
 	}
 
 	void DisabledInit()
@@ -80,9 +82,11 @@ private:
 		//printf("X pos: %d\tY pos: %d\n", robot->getXPos(), robot->getYPos());
 		robot->updatePos(leftDriveEnc->Get(), rightDriveEnc->Get(), navx->GetYaw());
 
+
 		if(joystick->GetRawButton(1)){
 			robot->reset();
 			navx->Reset();
+			autoState = 0;
 		}
 	}
 
@@ -93,6 +97,7 @@ private:
 
 	void AutonomousPeriodic()
 	{
+		printf("AutoState: %d", autoState);
 		switch(autoState)
 		{
 		case 0:
@@ -100,11 +105,14 @@ private:
 			autoState++;
 			break;
 		case 1:
-			if(autoPathDrive())
-			{
-				autoState++;
+			autoPathDrive();
+			/*{
+				//autoState++;
 				robot->initPath(auto1path2, PathBackward, 180);
-			}
+			}*/
+			break;
+		case 2:
+			autoPathDrive();
 			break;
 		}
 	}

@@ -3,6 +3,8 @@
 
 #include "path.h"
 
+#include "SimPID.h"
+
 #include <stdint.h>
 
 typedef enum PathFollower_directions_enum{
@@ -38,6 +40,7 @@ private:
 	float turnSpeed, driveSpeed;
 	float normalize(float normalAngle);
 
+
 public:
 	PathFollower();
 	void initPath(Path *nPath, PathDirection nDirection, float nFinalAngle);
@@ -49,6 +52,8 @@ public:
 	int getYPos(void);
 	void pickNextPoint(void);
 	bool isDone(void);
+	SimPID *turnPID;
+	SimPID *drivePID;
 };
 
 #endif

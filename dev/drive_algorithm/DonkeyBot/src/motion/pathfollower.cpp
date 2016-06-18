@@ -8,8 +8,6 @@
 
 #define PI 3.141592653589793f
 
-	SimPID *turnPID;
-	SimPID *drivePID;
 
 PathFollower::PathFollower(){
 	posX = posY = 0;
@@ -19,12 +17,20 @@ PathFollower::PathFollower(){
 
 }
 
+#define SQ(X) ((X)*(X))
+float deg2rad(float deg){
+	return deg / 180 * PI;
+}
+
 void PathFollower::initPath(Path *nPath, PathDirection nDirection, float nFinalAngle){
 
 	path = nPath;
 	direction = nDirection;
 	nextPoint = 1;
-	finalAngle = nFinalAngle;
+	finalAngle = deg2rad(nFinalAngle);
+
+	done = false;
+	driveDone = false;
 
 	//this stuff to constructor
 	maxSpeed = 0.5;
@@ -33,8 +39,11 @@ void PathFollower::initPath(Path *nPath, PathDirection nDirection, float nFinalA
 	errorTurnP = 0;
 	distanceError = 1000;
 
-	turnPID = new SimPID(0, 0, 0, 0);
-	drivePID = new SimPID(0,0, 0, 0);
+	turnPID = new SimPID(0.825, 0, 0.02, 0.087266);
+	turnPID->setContinuousAngle(true);
+
+	drivePID = new SimPID(0.0001,0, 0, 0);
+	drivePID->setMaxOutput(0.5);
 }
 
 void PathFollower::driveToPoint(void){
@@ -45,12 +54,13 @@ void PathFollower::driveToPoint(void){
 
 	int* nextCoordinate = path->getPoint(nextPoint);
 	float desiredAngle = atan2((float)(nextCoordinate[1] - posY), (float)(nextCoordinate[0] - posX));
-	if (direction == PathForward)
-		turnError = normalize(desiredAngle - angle);
-	else
-		turnError = normalize(desiredAngle - angle + PI);
 
-	turnPID->setDesiredValue(desiredAngle);
+	if (direction == PathBackward)
+	{
+		desiredAngle += PI;
+	}
+
+	turnPID->setDesiredValue(normalize(desiredAngle));
 	turnSpeed = turnPID->calcPID(angle);
 
 	printf("driving to point (%d,%d,%d)\n", nextCoordinate[0], nextCoordinate[1], nextPoint);
@@ -59,11 +69,11 @@ void PathFollower::driveToPoint(void){
 
 float PathFollower::normalize(float normalAngle){
 
-	if(normalAngle > PI)
+	while(normalAngle > PI)
 
 		normalAngle -= 2*PI;
 
-	else if(normalAngle < -PI)
+	while(normalAngle < -PI)
 
 		normalAngle += 2*PI;
 
@@ -75,10 +85,7 @@ void PathFollower::setSpeed(float nMaxSpeed, float nP){
 	distanceP = nP;
 }
 
-#define SQ(X) ((X)*(X))
-float deg2rad(float deg){
-	return deg / 180 * PI;
-}
+
 
 void PathFollower::pickNextPoint(void){
 	distanceToPoint = sqrt((float)((SQ(path->getPoint(nextPoint)[0]-posX) + SQ(path->getPoint(nextPoint)[1]-posY))));
@@ -101,7 +108,7 @@ int PathFollower::followPath(int32_t leftEncoder, int32_t rightEncoder, float nA
 
 	angle = deg2rad(nAngle);
 
-	float error = sqrt((float)((SQ(path->getEndPoint()[0]-posX) + SQ(path->getEndPoint()[1]-posY))));
+	driveError = sqrt((float)((SQ(path->getEndPoint()[0]-posX) + SQ(path->getEndPoint()[1]-posY))));
 
 	//get new position
 	updatePos(leftEncoder, rightEncoder, nAngle);
@@ -109,12 +116,15 @@ int PathFollower::followPath(int32_t leftEncoder, int32_t rightEncoder, float nA
 	pickNextPoint();
 
 	//get drive speed and turn speed
-	if(path->getPathDistance(nextPoint) > error)
+	if(path->getPathDistance(nextPoint) > driveError)
 	{
 		driveError = path->getPathDistance(nextPoint);
 	}
 
-	driveSpeed = -direction*distanceP*driveError + direction*errorTurnP*turnError;
+	drivePID->setDesiredValue(0);
+
+
+	driveSpeed = direction*drivePID->calcPID(driveError) + direction*errorTurnP*turnPID->getError();
 
 	driveToPoint();
 
@@ -138,6 +148,9 @@ int PathFollower::followPath(int32_t leftEncoder, int32_t rightEncoder, float nA
 
 		nLeftSpeed = -turnSpeed;
 		nRightSpeed	= -turnSpeed;
+
+		if(turnPID->isDone())
+			done = true;
 	}
 	else
 	{
@@ -183,7 +196,8 @@ int PathFollower::getYPos(void){
 }
 
 float PathFollower::driveToAngle(void){
-	return normalize(deg2rad(finalAngle)-angle)*turnP;
+	turnPID->setDesiredValue(finalAngle);
+	return turnPID->calcPID(angle);
 }
 
 bool PathFollower::isDone()

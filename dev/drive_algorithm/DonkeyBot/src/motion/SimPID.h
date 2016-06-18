@@ -12,10 +12,11 @@ public:
 	int getVelocity(void);
 	void setErrorEpsilon(float epsilon);
 	void setErrorIncrement(int inc);
-	void setDesiredValue(int val);
+	void setDesiredValue(float val);
 	void setMaxOutput(float max);
 	void setMinOutput(float min);
 	void resetErrorSum(void);
+	float getError(void);
 
 	void setContinuousAngle(bool set);
 
@@ -35,6 +36,7 @@ private:
 	int m_errorSum; // Sum of previous errors (for I calculation)
 	int m_errorIncrement; // Max increment to error sum each call
 	float m_errorEpsilon; // Allowable error in determining when done
+	float error;
 	
 	bool IsContinuousAngle;
 

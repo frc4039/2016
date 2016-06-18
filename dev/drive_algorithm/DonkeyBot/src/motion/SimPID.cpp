@@ -1,6 +1,7 @@
 #include "SimPID.h"
-#include "SimLib.h"
 #include "WPILib.h"
+
+#define PI 3.141592653589793f
 
 /**
  * Initializes the SimPID object. All parameters default to 0.
@@ -43,10 +44,10 @@ void SimPID::setContinuousAngle(bool set)
 }
 inline float SimPID::normal(float x)
 {
-	if(x > 180)
-		x -= 360;
-	else if(x < -180)
-		x += 360;
+	if(x > PI)
+		x -= 2*PI;
+	else if(x < -PI)
+		x += 2*PI;
 	return x;
 }
 float SimPID::getP()
@@ -81,7 +82,7 @@ void SimPID::setErrorIncrement(int inc)
 /**
  * Sets the desired value.
  */
-void SimPID::setDesiredValue(int val)
+void SimPID::setDesiredValue(float val)
 {
 	m_desiredValue = val;
 	if(IsContinuousAngle == true)
@@ -134,7 +135,7 @@ float SimPID::calcPID(float currentValue)
 	}
 	
 	// Calculate P Component.
-	float error = m_desiredValue - currentValue;
+	error = m_desiredValue - currentValue;
 	if(IsContinuousAngle == true)
 		error = normal(m_desiredValue - currentValue);
 	pVal = m_p * (float)error;
@@ -213,9 +214,7 @@ float SimPID::calcPID(float currentValue)
 
 	if (m_previousValue <= m_desiredValue + m_errorEpsilon
 				&& m_previousValue >= m_desiredValue - m_errorEpsilon
-				&& !m_firstCycle){
-		m_minOutput = 0.0;
-		if (m_previousValue == m_desiredValue)
+				&& !m_firstCycle && m_minOutput != 0){
 			output = 0.0;
 	}
 
@@ -234,6 +233,11 @@ float SimPID::calcPID(float currentValue)
 void SimPID::setMinDoneCycles(int n)
 {
 	m_minCycleCount = n;
+}
+
+float SimPID::getError(void)
+{
+	return error;
 }
 
 /**
