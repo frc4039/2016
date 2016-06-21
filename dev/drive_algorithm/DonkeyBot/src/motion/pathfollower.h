@@ -36,14 +36,14 @@ private:
 	float driveToAngle(void);
 	float distanceP;
 	float turnP;
-	float errorTurnP;
+	float maxTurnError;
 	float turnSpeed, driveSpeed;
 	float normalize(float normalAngle);
 
 
 public:
 	PathFollower();
-	void initPath(Path *nPath, PathDirection nDirection, float nFinalAngle);
+	void initPath(Path *nPath, PathDirection nDirection, float nFinalAngleDegrees);
 	int followPath(int32_t leftEncoder, int32_t rightEncoder, float nAngle, float &nLeftSpeed, float &nRightSpeed);
 	void setSpeed(float nMaxSpeed, float nP);
 	void updatePos(int leftEncoder, int rightEncoder, float heading);
@@ -52,6 +52,7 @@ public:
 	int getYPos(void);
 	void pickNextPoint(void);
 	bool isDone(void);
+	float limit(float x, float max);
 	SimPID *turnPID;
 	SimPID *drivePID;
 };

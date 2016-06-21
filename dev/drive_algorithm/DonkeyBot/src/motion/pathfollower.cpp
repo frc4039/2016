@@ -22,12 +22,12 @@ float deg2rad(float deg){
 	return deg / 180 * PI;
 }
 
-void PathFollower::initPath(Path *nPath, PathDirection nDirection, float nFinalAngle){
+void PathFollower::initPath(Path *nPath, PathDirection nDirection, float nFinalAngleDegrees){
 
 	path = nPath;
 	direction = nDirection;
 	nextPoint = 1;
-	finalAngle = deg2rad(nFinalAngle);
+	finalAngle = deg2rad(nFinalAngleDegrees);
 
 	done = false;
 	driveDone = false;
@@ -36,14 +36,16 @@ void PathFollower::initPath(Path *nPath, PathDirection nDirection, float nFinalA
 	maxSpeed = 0.5;
 	distanceP = 0.0001;
 	turnP = 0.825;
-	errorTurnP = 0;
-	distanceError = 1000;
 
-	turnPID = new SimPID(0.825, 0, 0.02, 0.087266);
+	//use these 4 values to tune the drive
+	maxTurnError = PI/3; //the  error value in radians where the drive stops moving
+	distanceError = 500;
+
+	turnPID = new SimPID(0.85, 0, 0.02, 0.087266);
 	turnPID->setContinuousAngle(true);
 
-	drivePID = new SimPID(0.0001,0, 0, 0);
-	drivePID->setMaxOutput(0.5);
+	drivePID = new SimPID(0.0005,0, 0.0002, 0);
+	drivePID->setMaxOutput(0.8);
 }
 
 void PathFollower::driveToPoint(void){
@@ -63,8 +65,8 @@ void PathFollower::driveToPoint(void){
 	turnPID->setDesiredValue(normalize(desiredAngle));
 	turnSpeed = turnPID->calcPID(angle);
 
-	printf("driving to point (%d,%d,%d)\n", nextCoordinate[0], nextCoordinate[1], nextPoint);
-	printf("desiredangle: %f", desiredAngle*180/PI);
+	//printf("driving to point (%d,%d,%d)\n", nextCoordinate[0], nextCoordinate[1], nextPoint);
+	//printf("desiredangle: %f", desiredAngle*180/PI);
 }
 
 float PathFollower::normalize(float normalAngle){
@@ -124,16 +126,10 @@ int PathFollower::followPath(int32_t leftEncoder, int32_t rightEncoder, float nA
 	drivePID->setDesiredValue(0);
 
 
-	driveSpeed = direction*drivePID->calcPID(driveError) + direction*errorTurnP*turnPID->getError();
+	driveSpeed = direction*drivePID->calcPID(driveError) * limit(1 - fabs(turnPID->getError())/maxTurnError, 1.f);
 
 	driveToPoint();
 
-	if (driveSpeed > maxSpeed){
-		driveSpeed = maxSpeed;
-	}
-	else if (driveSpeed < -maxSpeed){
-		driveSpeed = -maxSpeed;
-	}
 
 	//set left drive and right drive variables
 	//this automatically returns them
@@ -159,7 +155,7 @@ int PathFollower::followPath(int32_t leftEncoder, int32_t rightEncoder, float nA
 	}
 
 	printf("angle: %f\tPosX: %d\tPosY: %d\n", nAngle, posX, posY);
-	printf("driving to path. turn: %f\tdrive: %f)\n", turnSpeed, driveSpeed);
+	printf("turn: %f\tdrive: %f\n", turnSpeed, driveSpeed);
 
 	//return 1 if follow is complete, else 0
 	return 0;
@@ -203,4 +199,12 @@ float PathFollower::driveToAngle(void){
 bool PathFollower::isDone()
 {
 	return done;
+}
+
+float PathFollower::limit(float x, float max){
+	if (x > max)
+		return max;
+	else if (x < -max)
+		return -max;
+	return x;
 }

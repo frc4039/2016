@@ -9,10 +9,11 @@
 #include "motion/pathfollower.h"
 //#include "SimPID.h"
 #include "AHRS.h"
-#define X1 14000
-#define X2 10000
-#define X3 18000
-#define Y 7000
+#define X1 -14000
+#define X2 -10000
+#define X3 -18000
+#define Y1 7000
+#define Y2
 
 class Robot: public IterativeRobot
 {
@@ -30,7 +31,7 @@ private:
 	VictorSP *rightDrive2;
 	VictorSP *rightDrive3;
 
-	Path *auto1path1, *auto1path2;
+	Path *auto1path1, *auto1path2, *auto2path1, *auto2path2, *auto2path3, *auto2path4, *auto2path5, *auto2path6;
 
 
 	PathFollower *robot;
@@ -51,6 +52,7 @@ private:
 		rightDrive2 = new VictorSP(2);
 		rightDrive3 = new VictorSP(3);
 
+		/* figure 8
 		int start[2] = {0, 0};
 		int cp1[2] = {10000, 0};
 		int cp2[2] = {-10000, 14000};
@@ -58,17 +60,38 @@ private:
 		int cp4[2] = {-10000, 0};
 		int end1[2] = {0, 14000};
 		int end2[2] = {0, 7000};
+		*/
 
+/*		int start[2] = {0, 0};
+		int end1[2] = {X1, 0};
 
-		auto1path1 = new PathCurve(start, cp1, cp2, end1, 10);
-		auto1path2 = new PathCurve(end1, cp3, cp4, start, 10);
+		int cp1[2] = {X2, 0};
+		int cp2[2] = {X3, Y};
+		int end2[2] = {0, Y};*/
+
+		int start[2] = {0, 0};
+		int end1[2] = {14000, 0};
+
+		int cp1[2] = {20000, -4000};
+		int cp2[2] = {24000, 0};
+		int end2[2] = {20000, 4000};
+
+		//auto1path1 = new PathLine(start, end1, 10);
+		//auto1path2 = new PathCurve(end1, cp1, cp2, end2, 10);
 		//line3 = new PathLine(vertex, start, 2);
-		auto1path1->add(auto1path2);
+		//auto1path1->add(auto1path2);
+		auto2path1 = new PathLine(start, end1, 10);
+		auto2path2 = new PathCurve(end1, cp2, cp1, end2, 10);
+		auto2path1->add(auto2path2);
+		auto2path3 = new PathCurve(end2, cp1, cp2, end1, 10);
+		auto2path4 = new PathLine(end1, start, 10);
+		auto2path3->add(auto2path4);
+		auto2path5 = new PathLine(start, end1, 10);
+		auto2path6 = new PathCurve(end1, cp1, cp2, end2, 10);
 
 		robot = new PathFollower();
 
 		joystick = new Joystick(1);
-		printf("Initted");
 	}
 
 	void DisabledInit()
@@ -97,21 +120,28 @@ private:
 
 	void AutonomousPeriodic()
 	{
-		printf("AutoState: %d", autoState);
+		//printf("AutoState: %d", autoState);
 		switch(autoState)
 		{
 		case 0:
-			robot->initPath(auto1path1, PathForward, 0);
+			robot->initPath(auto2path1, PathForward, 0);
 			autoState++;
 			break;
 		case 1:
-			autoPathDrive();
-			/*{
-				//autoState++;
-				robot->initPath(auto1path2, PathBackward, 180);
-			}*/
+			if(autoPathDrive())
+			{
+				autoState++;
+				robot->initPath(auto2path3, PathBackward, 0);
+			}
 			break;
 		case 2:
+			if(autoPathDrive())
+			{
+				autoState++;
+				robot->initPath(auto2path1, PathForward, 0);
+			}
+			break;
+		case 3:
 			autoPathDrive();
 			break;
 		}
