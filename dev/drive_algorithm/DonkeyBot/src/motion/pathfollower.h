@@ -52,7 +52,6 @@ public:
 	int getYPos(void);
 	void pickNextPoint(void);
 	bool isDone(void);
-	float limit(float x, float max);
 	SimPID *turnPID;
 	SimPID *drivePID;
 };

@@ -5,8 +5,9 @@
 #include <math.h>
 
 #include "SimPID.h"
+#include "shiftlib.h"
 
-#define PI 3.141592653589793f
+using namespace shiftlib;
 
 
 PathFollower::PathFollower(){
@@ -15,11 +16,6 @@ PathFollower::PathFollower(){
 	nextPoint = 0;
 	leftSpeed = rightSpeed = 0;
 
-}
-
-#define SQ(X) ((X)*(X))
-float deg2rad(float deg){
-	return deg / 180 * PI;
 }
 
 void PathFollower::initPath(Path *nPath, PathDirection nDirection, float nFinalAngleDegrees){
@@ -62,31 +58,18 @@ void PathFollower::driveToPoint(void){
 		desiredAngle += PI;
 	}
 
-	turnPID->setDesiredValue(normalize(desiredAngle));
+	turnPID->setDesiredValue(normalizeRad(desiredAngle));
 	turnSpeed = turnPID->calcPID(angle);
 
 	//printf("driving to point (%d,%d,%d)\n", nextCoordinate[0], nextCoordinate[1], nextPoint);
 	//printf("desiredangle: %f", desiredAngle*180/PI);
 }
 
-float PathFollower::normalize(float normalAngle){
-
-	while(normalAngle > PI)
-
-		normalAngle -= 2*PI;
-
-	while(normalAngle < -PI)
-
-		normalAngle += 2*PI;
-
-	return normalAngle;
-}
 
 void PathFollower::setSpeed(float nMaxSpeed, float nP){
 	maxSpeed = nMaxSpeed;
 	distanceP = nP;
 }
-
 
 
 void PathFollower::pickNextPoint(void){
@@ -201,10 +184,3 @@ bool PathFollower::isDone()
 	return done;
 }
 
-float PathFollower::limit(float x, float max){
-	if (x > max)
-		return max;
-	else if (x < -max)
-		return -max;
-	return x;
-}

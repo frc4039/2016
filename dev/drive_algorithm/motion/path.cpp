@@ -72,7 +72,7 @@ float Path::getPathDistance(int i){
 }
 
 void Path::calcPathDistance(void){
-	pathDistance = new float[size-1];
+	pathDistance = new float[size];
 	float accum = 0;
 	pathDistance[size-1] = accum;
 	for (int i = size-2; i >= 0; i--){

@@ -1,5 +1,6 @@
 #include "SimPID.h"
-#include "WPILib.h"
+//#include "WPILib.h"
+#include <stdio.h>
 
 #define PI 3.141592653589793f
 
