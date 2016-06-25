@@ -23,9 +23,10 @@
 #include "WPILib.h"
 #include "NIIMAQdx.h"
 #include <math.h>
-#include "SimPID.h"
 #include "AHRS.h"
+#include "motion/shiftlib.h"
 
+using namespace shiftlib;
 
 
 //gamepad button locations
@@ -164,7 +165,7 @@ private:
 	VictorSP *m_leftDrive1; //1
 	VictorSP *m_rightDrive2; //2
 	VictorSP *m_rightDrive3; //3
-	float leftSpeed, rightSpeed, winchSpeed, time, motorSpeed;
+	float leftSpeed, rightSpeed, winchSpeed, time, motorSpeed, left, right;
 
 	VictorSP *m_climber;
 	VictorSP *m_intakeRoller;
@@ -207,6 +208,14 @@ private:
 	Encoder *m_rightDriveEncoder;
 
 	AHRS *nav;
+
+	//==========================PathFollow Variables===============
+	PathFollower *skittles;
+
+	Path *auto1path1, *auto1path2, *auto1path3, *auto1path4;
+
+	SimPID *pathDrivePID;
+	SimPID *pathTurnPID;
 
 	//=======================Vision Variables======================
 	IMAQdxSession session;
@@ -351,6 +360,25 @@ private:
 		trimTimer->Reset();
 		pressTimer = new Timer();
 		pressTimer->Reset();
+
+		int start[2] = {0, 0};
+		int end1[2] = {-14000, 0};
+
+		int cp1[2] = {-10000, 0};
+		int cp2[2] = {-18000, 7000};
+		int end2[2] = {0, 7000};
+
+		pathTurnPID = new SimPID(0.85, 0, 0.02, 0.087266);
+		pathTurnPID->setContinuousAngle(true);
+
+		pathDrivePID = new SimPID(0.0005, 0, 0.0002, 0);
+		pathDrivePID->setMaxOutput(0.8);
+
+		auto1path1 = new PathLine(start, end1, 10);
+		auto1path2 = new PathCurve(end1, cp1, cp2, end2, 10);
+
+		skittles = new PathFollower(500, PI/3, pathDrivePID, pathTurnPID);
+
 
 		VisionInit();
 
@@ -601,17 +629,147 @@ private:
 			switch(autoMode)
 			{
 			case 1:
-				m_leftDrive4->SetSpeed(0.f);
-				m_leftDrive1->SetSpeed(0.f);
-				m_rightDrive2->SetSpeed(0.f);
-				m_rightDrive3->SetSpeed(0.f);
+				switch(autoState)
+				{
+				case 0:
+					autoShooter(HOME_SHOOTER);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
 
-				autoShooter(HOME_SHOOTER);
-				autoIntake(HOME_INTAKE);
+					autoIntake(HOME_INTAKE);
+					m_intakeRoller->SetSpeed(0.f);
+					skittles->initPath(auto1path1, PathBackward, 0);
+					autoState++;
+					break;
+				case 1: //drive over defense
+					autoShooter(HOME_SHOOTER);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
 
-				m_intakeRoller->SetSpeed(0.f);
+					autoIntake(HOME_INTAKE);
+					m_intakeRoller->SetSpeed(0.f);
+					if(advancedAutoDrive())
+					{
 
+						skittles->initPath(auto1path2, PathForward, 0);
+						timer->Reset();
+						timer->Start();
+						autoState++;
+					}
+					break;
+				case 2:
+					autoShooter(SHOOT_FAR);
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+
+					autoIntake(INTAKE_SHOOT_FAR);
+					m_intakeRoller->SetSpeed(0.f);
+					if(timer->Get() > 0.5)
+						{
+							timer->Reset();
+							timer->Start();
+							autoState++;
+						}
+					break;
+				case 3:
+					FindTargetCenter();
+					shooter1->Set(-SPEED_RPM);
+					shooter2->Set(SPEED_RPM - BALL_SPIN);
+					autoShooter(SHOOT_FAR);
+					autoIntake(INTAKE_SHOOT_FAR);
+					m_intakeRoller->SetSpeed(0.f);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					shooterState = 60;
+					if(aimAtTarget2(autoAimAngle) == 1 && timer->Get() > 1.0){
+						autoState = 4;
+						timer->Reset();
+						timer->Start();
+					}
+					else if(timer->Get() > 2 && abs(centerx-(RES_X/2)+AIM_CORRECTION) < 3){
+						timer->Reset();
+						timer->Start();
+						autoState = 13;
+					}
+
+
+					break;
+				case 4: //shoot the ball
+					shooter1->Set(-SPEED_RPM);
+					shooter2->Set(SPEED_RPM - BALL_SPIN);
+					autoShooter(SHOOT_FAR);
+					autoIntake(INTAKE_SHOOT_FAR);
+					m_shootE->Set(true);
+					m_shootR->Set(false);
+					//m_shooterServo->SetAngle(SERVO_OUT);
+					m_intakeRoller->SetSpeed(0.f);
+					if(timer->Get() > 0.3)
+					{
+						autoState = 5;
+						timer->Start();
+						timer->Reset();
+					}
+					break;
+				case 5: //turn off shooter
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					autoShooter(HOME_SHOOTER);
+					autoIntake(HOME_INTAKE);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					m_intakeRoller->SetSpeed(0.f);
+					if(timer->Get() > 0.5)
+						autoState = 14;
+					break;
+				case 13: //wait before taking shot
+					shooter1->Set(-SPEED_RPM);
+					shooter2->Set(SPEED_RPM - BALL_SPIN);
+					m_leftDrive4->SetSpeed(0.f);
+					m_leftDrive1->SetSpeed(0.f);
+					m_rightDrive2->SetSpeed(0.f);
+					m_rightDrive3->SetSpeed(0.f);
+					autoShooter(SHOOT_FAR);
+					autoIntake(INTAKE_SHOOT_FAR);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					if(timer->Get() > 0.75){
+						timer->Reset();
+						timer->Start();
+						autoState = 4;
+					}
+					break;
+				case 14:
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					autoShooter(HOME_SHOOTER);
+					autoIntake(HOME_INTAKE);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					m_intakeRoller->SetSpeed(0.f);
+
+					if (advancedAutoDrive())
+					{
+						autoState = 15;
+					}
+					break;
+				case 15:
+					shooter1->Set(0.f);
+					shooter2->Set(0.f);
+					autoShooter(HOME_SHOOTER);
+					autoIntake(PICKUP);
+					m_shootE->Set(false);
+					m_shootR->Set(true);
+					m_intakeRoller->SetSpeed(0.f);
+					break;
+				}
 				break;
+
 			case 0: //drive forward with boulder preloaded and move under low bar
 				switch(autoState)
 				{
@@ -2984,6 +3142,17 @@ private:
 
 	//==========================================================USER FUNCTIONS=================================
 
+	int autoPathDrive()
+	{
+		if(skittles->followPath(m_leftDriveEncoder->Get(), m_rightDriveEncoder->Get(), nav->GetYaw(), left, right) == 0)
+		{
+			m_leftDrive4->SetSpeed(left);
+			m_leftDrive1->SetSpeed(left);
+			m_rightDrive2->SetSpeed(right);
+			m_rightDrive3->SetSpeed(right);
+		}
+		return skittles->isDone();
+	}
 
 	inline void teleDrive(void)
 	{
@@ -3701,19 +3870,17 @@ private:
 		return drivePID->isDone() && turnPID->isDone();
 	}
 
-
-
-/*	void updatePosition(void)
-	{
-		float currentAngle = nav->GetYaw();
-		int currentX = (m_rightDriveEncoder->Get() + m_leftDriveEncoder->Get())/2*cos(currentAngle);
-		int currentY =
-	}
-
 	bool advancedAutoDrive()
 	{
-
-	}*/
+		if(skittles->followPath(m_leftDriveEncoder->Get(), m_rightDriveEncoder->Get(), nav->GetYaw(), leftSpeed, rightSpeed) == 0)
+		{
+			m_leftDrive4->SetSpeed(leftSpeed);
+			m_leftDrive1->SetSpeed(leftSpeed);
+			m_rightDrive2->SetSpeed(rightSpeed);
+			m_rightDrive3->SetSpeed(rightSpeed);
+		}
+		return skittles->isDone();
+	}
 
 	void advancedServo(void)
 	{

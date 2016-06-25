@@ -3,10 +3,7 @@
  */
 
 #include "WPILib.h"
-#include "motion/path.h"
-#include "motion/pathcurve.h"
-#include "motion/pathline.h"
-#include "motion/pathfollower.h"
+#include "motion/shiftlib.h"
 //#include "SimPID.h"
 #include "AHRS.h"
 #define X1 -14000
@@ -33,6 +30,8 @@ private:
 
 	Path *auto1path1, *auto1path2, *auto2path1, *auto2path2, *auto2path3, *auto2path4, *auto2path5, *auto2path6;
 
+	SimPID *drivePID;
+	SimPID *turnPID;
 
 	PathFollower *robot;
 
@@ -89,7 +88,13 @@ private:
 		auto2path5 = new PathLine(start, end1, 10);
 		auto2path6 = new PathCurve(end1, cp1, cp2, end2, 10);
 
-		robot = new PathFollower();
+		turnPID = new SimPID(0.85, 0, 0.02, 0.087266);
+		turnPID->setContinuousAngle(true);
+
+		drivePID = new SimPID(0.0005,0, 0.0002, 0);
+		drivePID->setMaxOutput(0.8);
+
+		robot = new PathFollower(500, PI/3, drivePID, turnPID);
 
 		joystick = new Joystick(1);
 	}
