@@ -30,6 +30,7 @@ private:
 	float turnError;
 	float driveError;
 	float maxSpeed;
+	float percentPath;
 	Path *path;
 	float leftSpeed, rightSpeed;
 	void driveToPoint(void);
@@ -52,6 +53,8 @@ public:
 	int getYPos(void);
 	void pickNextPoint(void);
 	bool isDone(void);
+	void calcCompletion(void);
+	float getCompletion(void);
 	SimPID *turnPID;
 	SimPID *drivePID;
 };

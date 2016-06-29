@@ -170,8 +170,16 @@ float PathFollower::driveToAngle(void){
 	return turnPID->calcPID(angle);
 }
 
+float PathFollower::getCompletion(void){
+
+	percentPath = nextPoint/path->size;
+
+	return percentPath;
+}
+
 bool PathFollower::isDone()
 {
 	return done;
 }
+
 
