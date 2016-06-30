@@ -38,13 +38,13 @@ private:
 	float distanceP;
 	float turnP;
 	float maxTurnError;
-	float turnSpeed, driveSpeed;
+	float turnSpeed, driveSpeed, turnSpeedCorrection, turnScale;
 	float normalize(float normalAngle);
 
 
 public:
 	PathFollower(float nDistanceError, float nMaxTurnError, SimPID *nDrivePID, SimPID *nTurnPID);
-	void initPath(Path *nPath, PathDirection nDirection, float nFinalAngleDegrees);
+	void initPath(Path *nPath, PathDirection nDirection, float nTurnScale, float nFinalAngleDegrees);
 	int followPath(int32_t leftEncoder, int32_t rightEncoder, float nAngle, float &nLeftSpeed, float &nRightSpeed);
 	void setSpeed(float nMaxSpeed, float nP);
 	void updatePos(int leftEncoder, int rightEncoder, float heading);

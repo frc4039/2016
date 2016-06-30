@@ -15,6 +15,7 @@ PathFollower::PathFollower(float nDistanceError, float nMaxTurnError, SimPID *nD
 	posX = posY = 0;
 	lastX = lastY = 0;
 	nextPoint = 0;
+	turnSpeedCorrection = 0;
 	leftSpeed = rightSpeed = 0;
 	distanceError = nDistanceError;
 	maxTurnError = nMaxTurnError;
@@ -22,12 +23,13 @@ PathFollower::PathFollower(float nDistanceError, float nMaxTurnError, SimPID *nD
 	turnPID = nTurnPID;
 }
 
-void PathFollower::initPath(Path *nPath, PathDirection nDirection, float nFinalAngleDegrees){
+void PathFollower::initPath(Path *nPath, PathDirection nDirection, float nTurnScale, float nFinalAngleDegrees){
 
 	path = nPath;
 	direction = nDirection;
 	nextPoint = 1;
 	finalAngle = deg2rad(nFinalAngleDegrees);
+	turnScale = nTurnScale;
 
 	done = false;
 	driveDone = false;
@@ -42,7 +44,14 @@ void PathFollower::driveToPoint(void){
 	//total speed given by PID to endpoint, not target point
 
 	int* nextCoordinate = path->getPoint(nextPoint);
+	int* nextCoordinate2 = path->getPoint(nextPoint + 1);
+
+	float currentTangent = (nextCoordinate[1]-posY)/(nextCoordinate[0]-posX);
+	float nextTangent = (nextCoordinate2[1] - nextCoordinate[1])/(nextCoordinate2[0] - nextCoordinate[0]);
+
 	float desiredAngle = atan2((float)(nextCoordinate[1] - posY), (float)(nextCoordinate[0] - posX));
+
+	turnSpeedCorrection = scale(fabs(nextTangent - currentTangent), turnScale);
 
 	if (direction == PathBackward)
 	{
