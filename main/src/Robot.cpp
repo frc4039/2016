@@ -18,6 +18,9 @@
  *
  * April 21- LW
  * Added code for PD Servos, functions, variables, constants
+ *
+ * July 2nd- LW
+ * Added Climber state machine, climbertimer, climberState, etc
  */
 
 #include "WPILib.h"
@@ -58,6 +61,10 @@
 //#define SPEED_RPM_LOW 1100
 #define SPEED_RPM_LOW 3900
 #define BALL_SPIN ((int)(SPEED_RPM*0.3))
+
+//climber constants
+#define CLIMBER_SPEED -0.3f
+#define WINCH_SPEED -1.f
 
 //legacy shooter constants
 #define SHOOT_SPEED 0.8225f
@@ -156,8 +163,10 @@ class Robot: public IterativeRobot
 private:
 	LiveWindow *lw = LiveWindow::GetInstance();
 
-	int autoState, autoMode, autoPosition, shooterState, pusherState, shooterState1, autoDirection, servoState;
+	int autoState, autoMode, autoPosition, shooterState, pusherState, shooterState1, autoDirection, servoState, climberState;
 	int pastLeft, pastRight;
+
+	bool temp;
 
 	char autoFailSafe;
 
@@ -198,6 +207,7 @@ private:
 	Timer *trimTimer;
 	Timer *stateTimer;
 	Timer *pressTimer;
+	Timer *climberTimer;
 	double last_time;
 
 	DigitalInput *m_shooterHomeSwitch;
@@ -352,17 +362,22 @@ private:
 		trimTimer->Reset();
 		pressTimer = new Timer();
 		pressTimer->Reset();
+		climberTimer = new Timer();
+		climberTimer->Reset();
 
 		VisionInit();
 
 
 		shooterState = 0;
+		climberState = 0;
 		autoState = 0;
 		autoMode = 0;
 		autoPosition = 0;
 		pusherState = 0;
 		aim_fly_trim = 0;
 		servoState = 0;
+
+		temp = false;
 	}
 
 	void CameraSettings(void){
@@ -2962,6 +2977,7 @@ private:
 	{
 		operateShifter();
 		operateClimber();
+		//testOperateClimber();
 		advancedShoot();
 		advancedServo();		//shootTemp();
 		//simpleShoot();
@@ -3071,7 +3087,71 @@ private:
 
 	inline void operateClimber(void)
 	{
-		if(m_Gamepad->GetRawButton(GP_SELECT) && m_Gamepad->GetRawButton(GP_START))
+		switch(climberState)
+		{
+
+		case 0: //climber down
+			m_climber->SetSpeed(0.f);
+
+			if(m_Gamepad->GetRawButton(GP_Y))
+			{
+				climberTimer->Reset();
+				climberTimer->Start();
+				climberState = 10;
+
+			}
+
+			if(m_Gamepad->GetRawButton(GP_SELECT))
+				climberState = 50;
+			break;
+
+		case 10: //climber extends
+			m_climber->SetSpeed(CLIMBER_SPEED);
+			if(climberTimer->Get() > 0.5)
+			{
+				climberState = 20;
+			}
+			break;
+		case 20: //climber in position
+			m_climber->SetSpeed(0.f);
+			if(m_Gamepad->GetRawButton(GP_Y))
+			{
+				climberTimer->Reset();
+				climberTimer->Start();
+				climberState = 30;
+			}
+			if(m_Gamepad->GetRawButton(GP_SELECT))
+				climberState = 50;
+			break;
+
+		case 30: //climber winching
+			m_climber->SetSpeed(WINCH_SPEED);
+
+			if(!m_Gamepad->GetRawButton(GP_Y))
+				climberState = 20;
+
+			if(climberTimer->Get() > 15)
+				climberState = 40;
+
+			if(m_Gamepad->GetRawButton(GP_SELECT))
+				climberState = 50;
+
+			break;
+
+		case 40: //off
+			m_climber->SetSpeed(0.f);
+			if(m_Gamepad->GetRawButton(GP_SELECT))
+				climberState = 50;
+			break;
+
+		case 50: //manual winch control
+			winchSpeed = m_Gamepad->GetRawAxis(5);
+			m_climber->SetSpeed(winchSpeed);
+			if(m_Gamepad->GetRawButton(GP_Y))
+				climberState = 0;
+			break;
+		}
+		/*if(m_Gamepad->GetRawButton(GP_SELECT) && m_Gamepad->GetRawButton(GP_START))
 		{
 			m_climbE->Set(false);
 			m_climbR->Set(true);
@@ -3084,7 +3164,7 @@ private:
 
 		winchSpeed = m_Gamepad->GetRawAxis(5);
 
-		m_climber->Set(winchSpeed);
+		m_climber->Set(winchSpeed);*/
 
 	}
 
@@ -3093,6 +3173,11 @@ private:
 
 		m_PD->Set(motorSpeed);
 	}*/
+
+	inline void testOperateClimber(void){
+		winchSpeed = m_Gamepad->GetRawAxis(5);
+		m_climber->SetSpeed(winchSpeed);
+	}
 
 	inline void operateShifter(void){
 		if(m_Joystick->GetRawButton(1) || m_Gamepad2->GetRawButton(GP_R)){
