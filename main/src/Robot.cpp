@@ -24,10 +24,10 @@
  */
 
 #include "WPILib.h"
-#include "NIIMAQdx.h"
+//#include "NIIMAQdx.h"
 #include <math.h>
 #include "SimPID.h"
-#include "AHRS.h"
+//#include "AHRS.h"
 
 
 
@@ -89,7 +89,7 @@
 
 //miscellaneous constants
 #define PUSHER_SPEED 0.25
-#define ROLLER_SPEED_IN -0.65
+#define ROLLER_SPEED_IN -0.4
 #define ROLLER_SPEED_OUT -0.2
 #define PRACTICE_DRIVE_LIMIT 1
 #define PI 3.141592653589793f
@@ -217,10 +217,10 @@ private:
 	Encoder *m_leftDriveEncoder;
 	Encoder *m_rightDriveEncoder;
 
-	AHRS *nav;
+	//AHRS *nav;
 
 	//=======================Vision Variables======================
-	IMAQdxSession session;
+	/*IMAQdxSession session;
 	Image *frame;
 	Image *subtracted;
 	Image *processed;
@@ -246,9 +246,9 @@ private:
 	float64 Gr, Gb, Gg;
 	int picture_ID;
 	char filename[25];
-	double rect_left, rect_width, target_y, centerx, last_turn;
+	double rect_left, rect_width, target_y, centerx, last_turn;*/
 	float autoDelay;
-	float autoAimAngle;
+	/*float autoAimAngle;
 	int aim_loop_counter;
 	float aim_fly_trim;
 
@@ -257,7 +257,7 @@ private:
 	ParticleFilterOptions2 filterOptions;
 	ParticleFilterCriteria2 filterCriteria[CRITERIA_COUNT];
 	int num_particlesFound;
-	MeasurementType measurements[1];
+	MeasurementType measurements[1];*/
 
 //====================================================INIT==============================================
 	void RobotInit(void) override
@@ -348,7 +348,7 @@ private:
 		//m_intake->SetFeedbackDevice(CANTalon::QuadEncoder);
 		m_intake->ConfigEncoderCodesPerRev(4096);
 
-		nav = new AHRS(SPI::Port::kMXP);
+		//nav = new AHRS(SPI::Port::kMXP);
 
 		m_climber = new VictorSP(5);
 
@@ -365,7 +365,7 @@ private:
 		climberTimer = new Timer();
 		climberTimer->Reset();
 
-		VisionInit();
+		//VisionInit();
 
 
 		shooterState = 0;
@@ -374,13 +374,13 @@ private:
 		autoMode = 0;
 		autoPosition = 0;
 		pusherState = 0;
-		aim_fly_trim = 0;
+		//aim_fly_trim = 0;
 		servoState = 0;
 
 		temp = false;
 	}
 
-	void CameraSettings(void){
+	/*void CameraSettings(void){
 		//get all attributes
 		IMAQdxEnumerateAttributes2(session, NULL, &numOfAttributes,"" , IMAQdxAttributeVisibilityAdvanced);
 		printf("num of attributes: %d\n", (int)numOfAttributes);
@@ -391,7 +391,7 @@ private:
 		IMAQdxEnumerateAttributeValues(session, "CameraAttributes::Exposure::Mode", NULL, &size);
 		printf("num of values: %d\n", (int)size);
 		items = new IMAQdxEnumItem[size];
-		IMAQdxEnumerateAttributeValues(session, "CameraAttributes::Exposure::Mode", items, &size);
+		IMAQdxEnumerateAttributeValues(session, "CameraAttributes::Exposure::Mode", items, &size);*/
 
 /*
 		for (unsigned int i = 0; i < numOfAttributes; i++)
@@ -399,7 +399,7 @@ private:
 		for (unsigned int i = 0; i < size; i++)
 			printf("Name: %s\tValue: %d\tReserved: %d\d", items[i].Name, items[i].Value, items[i].Reserved);
 */
-		IMAQdxGetAttribute(session, "CameraAttributes::Exposure::Mode", IMAQdxValueTypeEnumItem, &exposure_mode);
+/*		IMAQdxGetAttribute(session, "CameraAttributes::Exposure::Mode", IMAQdxValueTypeEnumItem, &exposure_mode);
 		exposure_mode.Value = (uInt32)1;
 
 		//set the settings
@@ -514,11 +514,11 @@ private:
 		}
 
 	}
-
+*/
 	//======================================END OF INIT=======================================================
 	void DisabledInit()
 	{
-		IMAQdxStopAcquisition(session);
+		//IMAQdxStopAcquisition(session);
 		stateTimer->Stop();
 		m_LED->Set(Relay::kOff);
 	}
@@ -590,7 +590,7 @@ private:
 	//========================================================AUTONOMOUS=======================================
 	void AutonomousInit(void)
 	{
-		autoState = 0;
+/*		autoState = 0;
 		autoFailSafe = 0;
 		nav->Reset();
 		m_leftDriveEncoder->Reset();
@@ -1005,7 +1005,7 @@ private:
 							autoState = 3;
 						}
 					break;
-				/*case 8: //position 2_R extra drive
+				case 8: //position 2_R extra drive
 					autoShooter(SHOOT_FAR);
 					autoIntake(INTAKE_SHOOT_FAR);
 					shooter1->Set(0.f);
@@ -1022,7 +1022,7 @@ private:
 						}
 
 
-					break;*/
+					break;
 				case 9: //position 2_R rough angle
 					autoShooter(SHOOT_FAR);
 					autoIntake(INTAKE_SHOOT_FAR);
@@ -1046,7 +1046,7 @@ private:
 					if(timer->Get() > 1.0){
 						autoAimAngle = getAutoAimAngle();
 
-						/*if(autoPosition == 2)
+						if(autoPosition == 2)
 						{
 							timer->Reset();
 							timer->Start();
@@ -1057,7 +1057,7 @@ private:
 							timer->Reset();
 							timer->Start();
 							autoState = 8;
-						}*/
+						}
 						timer->Reset();
 						timer->Start();
 						autoState = 3;
@@ -1280,7 +1280,7 @@ private:
 							autoState = 3;
 						}
 					break;
-				/*case 8: //position 2_R extra drive
+				case 8: //position 2_R extra drive
 					autoShooter(SHOOT_FAR);
 					autoIntake(INTAKE_SHOOT_FAR);
 					shooter1->Set(0.f);
@@ -1297,7 +1297,7 @@ private:
 						}
 
 
-					break;*/
+					break;
 				case 9: //position 2_R rough angle
 					autoShooter(SHOOT_FAR);
 					autoIntake(INTAKE_SHOOT_FAR);
@@ -1321,7 +1321,7 @@ private:
 					if(timer->Get() > 1.0){
 						autoAimAngle = getAutoAimAngle();
 
-						/*if(autoPosition == 2)
+						if(autoPosition == 2)
 						{
 							timer->Reset();
 							timer->Start();
@@ -1332,7 +1332,7 @@ private:
 							timer->Reset();
 							timer->Start();
 							autoState = 8;
-						}*/
+						}
 						timer->Reset();
 						timer->Start();
 						autoState = 3;
@@ -1555,7 +1555,7 @@ private:
 							autoState = 3;
 						}
 					break;
-				/*case 8: //position 2_R extra drive
+				case 8: //position 2_R extra drive
 					autoShooter(SHOOT_FAR);
 					autoIntake(INTAKE_SHOOT_FAR);
 					shooter1->Set(0.f);
@@ -1572,7 +1572,7 @@ private:
 						}
 
 
-					break;*/
+					break;
 				case 9: //position 2_R rough angle
 					autoShooter(SHOOT_FAR);
 					autoIntake(INTAKE_SHOOT_FAR);
@@ -1596,7 +1596,7 @@ private:
 					if(timer->Get() > 1.0){
 						autoAimAngle = getAutoAimAngle();
 
-						/*if(autoPosition == 2)
+						if(autoPosition == 2)
 						{
 							timer->Reset();
 							timer->Start();
@@ -1607,7 +1607,7 @@ private:
 							timer->Reset();
 							timer->Start();
 							autoState = 8;
-						}*/
+						}
 						timer->Reset();
 						timer->Start();
 						autoState = 3;
@@ -2103,7 +2103,7 @@ private:
 								autoState = 6;
 							}
 						break;
-					/*case 8: //position 2_R extra drive
+					case 8: //position 2_R extra drive
 						autoShooter(SHOOT_FAR);
 						autoIntake(INTAKE_SHOOT_FAR);
 						shooter1->Set(0.f);
@@ -2120,7 +2120,7 @@ private:
 							}
 
 
-						break;*/
+						break;
 					case 11 : //position 2_R rough angle
 						autoShooter(SHOOT_FAR);
 						autoIntake(INTAKE_SHOOT_FAR);
@@ -2139,7 +2139,7 @@ private:
 							}
 						break;
 
-/*					case 12: //back up before shot
+				case 12: //back up before shot
 						autoShooter(SHOOT_FAR);
 						autoIntake(INTAKE_SHOOT_FAR);
 						shooter1->Set(0.f);
@@ -2156,7 +2156,7 @@ private:
 								autoState = 3;
 							}
 						break;
-*/
+
 					case 13: //wait a bit before taking picture
 						autoShooter(SHOOT_FAR);
 							if(timer->Get() > 1.0){
@@ -2433,7 +2433,7 @@ private:
 								autoState = 6;
 							}
 						break;
-					/*case 8: //position 2_R extra drive
+					case 8: //position 2_R extra drive
 						autoShooter(SHOOT_FAR);
 						autoIntake(INTAKE_SHOOT_FAR);
 						shooter1->Set(0.f);
@@ -2450,7 +2450,7 @@ private:
 							}
 
 
-						break;*/
+						break;
 					case 11 : //position 2_R rough angle
 						autoShooter(SHOOT_FAR);
 						autoIntake(INTAKE_SHOOT_FAR);
@@ -2469,7 +2469,7 @@ private:
 							}
 						break;
 
-/*					case 12: //back up before shot
+					case 12: //back up before shot
 						autoShooter(SHOOT_FAR);
 						autoIntake(INTAKE_SHOOT_FAR);
 						shooter1->Set(0.f);
@@ -2486,7 +2486,7 @@ private:
 								autoState = 3;
 							}
 						break;
-*/
+
 					case 13: //wait a bit before taking picture
 						autoShooter(SHOOT_FAR);
 							if(timer->Get() > 1.0){
@@ -2955,13 +2955,13 @@ private:
 				}
 				break;
 			}
-		}
+		}*/
 	}
 
 	//===========================================================TELEOP=======================================
 	void TeleopInit(void)
 	{
-		IMAQdxStartAcquisition(session);
+		//IMAQdxStartAcquisition(session);
 		trimTimer->Start();
 		if(m_Joystick->GetRawButton(9))
 			m_shooter->SetPosition(0);
@@ -2989,7 +2989,7 @@ private:
 		//if (m_Joystick->GetRawButton(10))
 			//aimsAtTarget();
 		if(shooterState != 90){
-			FindTargetCenter();
+			//FindTargetCenter();
 			teleDrive();
 
 		//printf("Shooter 1 RPM: %f\tShooter 2: %f", shooter1->get   )
@@ -3414,13 +3414,13 @@ private:
 					timer->Reset();
 					timer->Start();
 				}
-			else if(m_Gamepad->GetRawButton(GP_A))
+			/*else if(m_Gamepad->GetRawButton(GP_A))
 			{
 				shooterState = 90;
 				autoAimAngle = getAutoAimAngle();
 				timer->Reset();
 				timer->Start();
-			}
+			}*/
 		/*	else if(m_Gamepad->GetRawButton(GP_Y))
 				shooterState = 61;*/
 			break;
@@ -3492,12 +3492,12 @@ private:
 				timer->Start();
 				shooterState = 80;
 			}
-			else if(m_Gamepad->GetRawButton(GP_A))
+			/*else if(m_Gamepad->GetRawButton(GP_A))
 			{
 				shooterState = 90;
 				timer->Reset();
 				timer->Start();
-			}
+			}*/
 
 			break;
 
@@ -3628,7 +3628,7 @@ private:
 				timer->Reset();
 			}
 			break;
-		case 90: //vision
+		/*case 90: //vision
 			FindTargetCenter();
 			shooter1->Set(-SPEED_RPM);
 			shooter2->Set(SPEED_RPM - BALL_SPIN);
@@ -3641,7 +3641,7 @@ private:
 				timer->Start();
 				shooterState = 89;
 			}
-			break;
+			break;*/
 		case 91: //spin up
 			shooter1->Set(-SPEED_RPM);
 			shooter2->Set(SPEED_RPM - BALL_SPIN);
@@ -3819,7 +3819,7 @@ private:
 	}
 
 	//===============================================VISION FUNCTIONS=============================================
-
+/*
 	float getAutoAimAngle(){
 		int image_error;
 		image_error = FindTargetCenter();
@@ -3874,7 +3874,7 @@ private:
 
 			//SmartDashboard::PutNumber("Aim Error", IMAGE_CENTER + AIM_CORRECTION - x_pixel);
 			//SmartDashboard::PutNumber("Motor Output", turn);
-		}
+		}*/
 
 		/*
 		if (target_y < CLOSE_LIMIT)
@@ -3882,7 +3882,7 @@ private:
 		else
 			autoShooter(SHOOT_FAR);
 		*/
-
+/*
 		//if image hasn't been found in a while then stop moving
 		if (aim_loop_counter - AIM_LOOP_WAIT >= AIM_TIMEOUT){
 			turn = last_turn = 0;
@@ -4042,14 +4042,14 @@ private:
 	}
 
 	inline void BinaryFilter(void){
-		for (int i = 0; i < (RES_X*RES_Y); i++){
+		for (int i = 0; i < (RES_X*RES_Y); i++){*/
 			/*
 			int x = i % RES_X;
 			int y = (int)(i / RES_X);
 			if (y > 400)
 				printf("R, G, B: (%d, %d, %d), (%d, %d)\n", R[i*4], G[i*4], B[i*4], x, y);
 			*/
-
+/*
 			if ((G[i*4] > G_THRESHOLD)){
 				//printf("got green pixel: %d\n", G[i*4]);
 				proc_pixel[i] = 255;
@@ -4091,16 +4091,16 @@ private:
 			CameraServer::GetInstance()->SetImage(subtracted);
 		}
 
-	}
+	}*/
 
 	//=============================================MATHY FUNCTIONS=======================================
 
-	inline int findShooterAngle()
+/*	inline int findShooterAngle()
 	{
 		int angle = (SLOPE*target_y + INTERCEPT + SHOOTER_TRIM + aim_fly_trim)*(4096.f/360.f);
 		//printf("auto shooter angle: %d\n", angle);
 		return angle;
-	}
+	}*/
 
 	inline float expo(float x, int n)
 	{
