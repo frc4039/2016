@@ -27,6 +27,7 @@
 //#include "NIIMAQdx.h"
 #include <math.h>
 #include "SimPID.h"
+#include "CANTalon.h"
 //#include "AHRS.h"
 
 
@@ -217,7 +218,7 @@ private:
 	Encoder *m_leftDriveEncoder;
 	Encoder *m_rightDriveEncoder;
 
-	//AHRS *nav;
+	AHRS *nav;
 
 	//=======================Vision Variables======================
 	/*IMAQdxSession session;
@@ -348,7 +349,7 @@ private:
 		//m_intake->SetFeedbackDevice(CANTalon::QuadEncoder);
 		m_intake->ConfigEncoderCodesPerRev(4096);
 
-		//nav = new AHRS(SPI::Port::kMXP);
+		nav = new AHRS(SPI::Port::kMXP);
 
 		m_climber = new VictorSP(5);
 
@@ -582,7 +583,7 @@ private:
 
 		//printf("shooterA: %d\tintakeA: %d\n", m_shooter->GetEncPosition(), m_intake->GetEncPosition());
 		//printf("shooterA: %f\tintakeA: %f\n", m_shooter->GetPosition(), m_intake->GetPosition());
-
+1
 		if(m_Gamepad->GetRawButton(GP_R))
 			autoPosition = 6;
 	}
@@ -3770,7 +3771,7 @@ private:
 		}
 
 
-	bool autoDrive(int distance, int angle)
+	/*bool autoDrive(int distance, int angle)
 	{
 		int currentDist = (m_rightDriveEncoder->Get() + m_leftDriveEncoder->Get()) / 2;
 		int currentAngle = nav->GetYaw();
@@ -3787,7 +3788,7 @@ private:
 		m_leftDrive1->SetSpeed(limit(drive + turn, 1));
 
 		return drivePID->isDone() && turnPID->isDone();
-	}
+	}*/
 
 
 
