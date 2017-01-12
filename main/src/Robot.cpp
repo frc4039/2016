@@ -218,7 +218,7 @@ private:
 	Encoder *m_leftDriveEncoder;
 	Encoder *m_rightDriveEncoder;
 
-	AHRS *nav;
+	//AHRS *nav;
 
 	//=======================Vision Variables======================
 	/*IMAQdxSession session;
@@ -349,7 +349,7 @@ private:
 		//m_intake->SetFeedbackDevice(CANTalon::QuadEncoder);
 		m_intake->ConfigEncoderCodesPerRev(4096);
 
-		nav = new AHRS(SPI::Port::kMXP);
+		//nav = new AHRS(SPI::Port::kMXP);
 
 		m_climber = new VictorSP(5);
 
@@ -532,8 +532,8 @@ private:
 		//if(m_shooterHomeSwitch->Get() == CLOSED)
 			//m_shooter->SetPosition(0);
 
-		printf("\n r %f", nav->GetRoll());
-		printf("\n p %f", nav->GetPitch());
+		//printf("\n r %f", nav->GetRoll());
+		//printf("\n p %f", nav->GetPitch());
 
 
 
@@ -566,7 +566,7 @@ private:
 				else if (i >= 9 && i <= 12)
 					autoPosition = i - 7;
 
-				nav->Reset();
+				//nav->Reset();
 				autoDelay = -5*(m_Joystick->GetRawAxis(3)) + 5;
 				m_leftDriveEncoder->Reset();
 				m_rightDriveEncoder->Reset();
@@ -575,15 +575,15 @@ private:
 		}
 
 
-		DriverStation::ReportError("Gyro: " + std::to_string((float)nav->GetYaw()) +
+		/*DriverStation::ReportError("Gyro: " + std::to_string((float)nav->GetYaw()) +
 				" enc: " + std::to_string((long)m_leftDriveEncoder->Get()) +
 				", " + std::to_string((long)m_rightDriveEncoder->Get()) + "\n");
-
+*/
 
 
 		//printf("shooterA: %d\tintakeA: %d\n", m_shooter->GetEncPosition(), m_intake->GetEncPosition());
 		//printf("shooterA: %f\tintakeA: %f\n", m_shooter->GetPosition(), m_intake->GetPosition());
-1
+
 		if(m_Gamepad->GetRawButton(GP_R))
 			autoPosition = 6;
 	}
