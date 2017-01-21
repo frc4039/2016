@@ -32,6 +32,8 @@
 
 
 
+
+
 //gamepad button locations
 #define JS_RIGHT 90
 #define JS_LEFT 270
@@ -90,7 +92,7 @@
 
 //miscellaneous constants
 #define PUSHER_SPEED 0.25
-#define ROLLER_SPEED_IN -0.4
+#define ROLLER_SPEED_IN -1.0
 #define ROLLER_SPEED_OUT -0.2
 #define PRACTICE_DRIVE_LIMIT 1
 #define PI 3.141592653589793f
@@ -166,6 +168,9 @@ private:
 
 	int autoState, autoMode, autoPosition, shooterState, pusherState, shooterState1, autoDirection, servoState, climberState;
 	int pastLeft, pastRight;
+
+	float lastTime;
+	int lastDist;
 
 	bool temp;
 
@@ -3771,10 +3776,12 @@ private:
 		}
 
 
-	/*bool autoDrive(int distance, int angle)
+/*	bool autoDrive(int distance, int angle, float speed)
 	{
 		int currentDist = (m_rightDriveEncoder->Get() + m_leftDriveEncoder->Get()) / 2;
 		int currentAngle = nav->GetYaw();
+		float currentTime = timer->Get();
+
 
 		drivePID->setDesiredValue(distance);
 		turnPID->setDesiredValue(angle);
@@ -3787,9 +3794,18 @@ private:
 		m_leftDrive4->SetSpeed(limit(drive + turn, 1));
 		m_leftDrive1->SetSpeed(limit(drive + turn, 1));
 
+		lastDist = currentDist;
+		lastTime = currentTime;
+
 		return drivePID->isDone() && turnPID->isDone();
+
+
 	}*/
 
+
+	void realSpeed() {
+
+	}
 
 
 /*	void updatePosition(void)
